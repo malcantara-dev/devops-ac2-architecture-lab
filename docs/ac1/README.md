@@ -59,12 +59,12 @@ automatizados em `src/test/java/.../domain`.
 
 | Cenário | Escrito por | Given / When / Then | Classe de teste |
 |---|---|---|---|
-| 1 | Matheus de Alcantara | **Dado** um curso concluído **E** a nota do usuário para aquele curso é >= 7 **Quando** este curso é finalizado **Então** mais 3 créditos de curso gratuito devem ser acrescentados para o usuário | [ConclusaoCursoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/ConclusaoCursoTest.java) |
-| 2 | Matheus de Alcantara | **Dado** um curso concluído **E** a nota do usuário para aquele curso é < 7 **Quando** este curso é finalizado **Então** nenhum crédito de curso gratuito é adicionado para o usuário | [ConclusaoCursoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/ConclusaoCursoTest.java) |
-| 3 | Rafael Silva Fiamengue | **Dado** um curso em andamento **Quando** existe apenas 1 curso em andamento **E** não existe nenhum curso finalizado pelo usuário **Então** o usuário deve ter 0 créditos de curso gratuito | [CursoEmAndamentoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/CursoEmAndamentoTest.java) |
-| 4 | Rafael Silva Fiamengue | **Dado** um curso em andamento **E** a média parcial deste curso é >= 7 **Quando** o curso ainda não foi finalizado **Então** nenhum crédito de curso gratuito é adicionado para o usuário | [CursoEmAndamentoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/CursoEmAndamentoTest.java) |
-| 5 | Henrique Bicudo Paulino | **Dado** um curso não adquirido **Quando** o usuário solicitar o desbloqueio deste curso **E** o usuário possui >= 1 crédito **Então** este curso é liberado e adicionado à biblioteca do usuário **E** um crédito é consumido | [DesbloqueioCursoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/DesbloqueioCursoTest.java) |
-| 6 | Henrique Bicudo Paulino | **Dado** um curso não adquirido **Quando** o usuário solicitar o desbloqueio deste curso **E** o usuário possui < 1 crédito **Então** este curso não é liberado **E** um aviso de "créditos insuficientes" é exibido | [DesbloqueioCursoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/DesbloqueioCursoTest.java) |
+| 1 | Matheus de Alcantara | **Dado** um curso concluído **E** a nota do usuário para aquele curso é >= 7 **Quando** este curso é finalizado **Então** mais 3 créditos de curso gratuito devem ser acrescentados para o usuário | [ConclusaoCursoTest.java](../../src/test/java/org/example/grupo_7_praticaatdd/domain/ConclusaoCursoTest.java) |
+| 2 | Matheus de Alcantara | **Dado** um curso concluído **E** a nota do usuário para aquele curso é < 7 **Quando** este curso é finalizado **Então** nenhum crédito de curso gratuito é adicionado para o usuário | [ConclusaoCursoTest.java](../../src/test/java/org/example/grupo_7_praticaatdd/domain/ConclusaoCursoTest.java) |
+| 3 | Rafael Silva Fiamengue | **Dado** um curso em andamento **Quando** existe apenas 1 curso em andamento **E** não existe nenhum curso finalizado pelo usuário **Então** o usuário deve ter 0 créditos de curso gratuito | [CursoEmAndamentoTest.java](../../src/test/java/org/example/grupo_7_praticaatdd/domain/CursoEmAndamentoTest.java) |
+| 4 | Rafael Silva Fiamengue | **Dado** um curso em andamento **E** a média parcial deste curso é >= 7 **Quando** o curso ainda não foi finalizado **Então** nenhum crédito de curso gratuito é adicionado para o usuário | [CursoEmAndamentoTest.java](../../src/test/java/org/example/grupo_7_praticaatdd/domain/CursoEmAndamentoTest.java) |
+| 5 | Henrique Bicudo Paulino | **Dado** um curso não adquirido **Quando** o usuário solicitar o desbloqueio deste curso **E** o usuário possui >= 1 crédito **Então** este curso é liberado e adicionado à biblioteca do usuário **E** um crédito é consumido | [DesbloqueioCursoTest.java](../../src/test/java/org/example/grupo_7_praticaatdd/domain/DesbloqueioCursoTest.java) |
+| 6 | Henrique Bicudo Paulino | **Dado** um curso não adquirido **Quando** o usuário solicitar o desbloqueio deste curso **E** o usuário possui < 1 crédito **Então** este curso não é liberado **E** um aviso de "créditos insuficientes" é exibido | [DesbloqueioCursoTest.java](../../src/test/java/org/example/grupo_7_praticaatdd/domain/DesbloqueioCursoTest.java) |
 
 ## TDD - evidências do ciclo RED, GREEN e BLUE
 
@@ -81,11 +81,11 @@ Cada integrante trabalhou em uma branch própria e os prints de cada fase estão
 
 Pastas de prints por integrante:
 
-- [printsTestes/cenarios-01-02-alcantara/](printsTestes/cenarios-01-02-alcantara/)
-- [printsTestes/cenarios-03-04-rafael/](printsTestes/cenarios-03-04-rafael/)
-- [printsTestes/cenarios-05-06-henrique/](printsTestes/cenarios-05-06-henrique/)
+- [printsTestes/cenarios-01-02-alcantara/](../../printsTestes/cenarios-01-02-alcantara/)
+- [printsTestes/cenarios-03-04-rafael/](../../printsTestes/cenarios-03-04-rafael/)
+- [printsTestes/cenarios-05-06-henrique/](../../printsTestes/cenarios-05-06-henrique/)
 
-O workflow [.github/workflows/testes.yml](.github/workflows/testes.yml) roda os testes e publica
+O workflow [.github/workflows/testes.yml](../../.github/workflows/testes.yml) roda os testes e publica
 os relatórios do Surefire e do JaCoCo a cada push e pull request.
 
 ### Cobertura e complexidade ao final do BLUE
@@ -101,7 +101,7 @@ Escopo avaliado: o pacote `domain`, que é o código escrito pelos integrantes n
 | Usuario | 65/65 | 2/2 |
 
 Cobertura de 100% no pacote `domain`, sem vermelho e sem amarelo.
-Print: [printsEvidencias/07-jacoco-blue-100.png](printsEvidencias/07-jacoco-blue-100.png)
+Print: [printsEvidencias/07-jacoco-blue-100.png](../../printsEvidencias/07-jacoco-blue-100.png)
 
 A maior complexidade ciclomática entre os métodos escritos pelo grupo é **3**
 (`Matricula.concluidoComAproveitamento`), dentro do limite de 7.
@@ -196,15 +196,15 @@ e acompanhar os créditos do aluno.
 
 | Evidência | Print |
 |---|---|
-| Front-end em Vue.js consumindo a API | [printsEvidencias/01-front-vue.png](printsEvidencias/01-front-vue.png) |
-| Swagger com os endpoints expostos | [printsEvidencias/02-swagger.png](printsEvidencias/02-swagger.png) |
-| Banco H2 rodando, com os dados da regra de negócio | [printsEvidencias/03-h2-console.png](printsEvidencias/03-h2-console.png) |
-| PostgreSQL rodando em container | [printsEvidencias/04-postgres-docker.png](printsEvidencias/04-postgres-docker.png) |
-| pgAdmin administrando o banco via container | [printsEvidencias/05-pgadmin.png](printsEvidencias/05-pgadmin.png) |
-| Aplicação rodando via Docker Compose | [printsEvidencias/06-docker-compose.png](printsEvidencias/06-docker-compose.png) |
-| Cobertura de 100% no domínio ao final do BLUE | [printsEvidencias/07-jacoco-blue-100.png](printsEvidencias/07-jacoco-blue-100.png) |
+| Front-end em Vue.js consumindo a API | [printsEvidencias/01-front-vue.png](../../printsEvidencias/01-front-vue.png) |
+| Swagger com os endpoints expostos | [printsEvidencias/02-swagger.png](../../printsEvidencias/02-swagger.png) |
+| Banco H2 rodando, com os dados da regra de negócio | [printsEvidencias/03-h2-console.png](../../printsEvidencias/03-h2-console.png) |
+| PostgreSQL rodando em container | [printsEvidencias/04-postgres-docker.png](../../printsEvidencias/04-postgres-docker.png) |
+| pgAdmin administrando o banco via container | [printsEvidencias/05-pgadmin.png](../../printsEvidencias/05-pgadmin.png) |
+| Aplicação rodando via Docker Compose | [printsEvidencias/06-docker-compose.png](../../printsEvidencias/06-docker-compose.png) |
+| Cobertura de 100% no domínio ao final do BLUE | [printsEvidencias/07-jacoco-blue-100.png](../../printsEvidencias/07-jacoco-blue-100.png) |
 
 ## Planilha
 
 A planilha com as User Stories, os cenários BDD e o primeiro passo do TDD está versionada em
-[Tabela_US_BDD_TDD.xlsx](Tabela_US_BDD_TDD.xlsx).
+[Tabela_US_BDD_TDD.xlsx](../../Tabela_US_BDD_TDD.xlsx).
