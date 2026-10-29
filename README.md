@@ -147,7 +147,31 @@ deploy independente.
 
 ## 8. C4 - visão de Container
 
-_Em elaboração._
+No Desafio 1 a decisão é macro. O C4 Container mostra que o Core continua sendo **um único
+container** e explicita que sua organização interna passa a ser modular. O detalhamento dos
+componentes internos fica para o C4 Component do Desafio 2.
+
+```mermaid
+flowchart TB
+    aluno["Aluno<br/>[Pessoa]"]
+    admin["Administrador do banco<br/>[Pessoa]"]
+
+    subgraph plataforma["Plataforma de Gamificação"]
+        spa["Front-end Web<br/>[Vue.js 3, servido pelo Core]<br/>Cursos, matrículas, créditos e ranking"]
+        core["Core Gamificação<br/>[Java / Spring Boot]<br/>MONÓLITO MODULAR<br/>matricula · ranking · usuario · curso · domain"]
+        db[("Banco Relacional<br/>[PostgreSQL 16]")]
+        pgadmin["pgAdmin<br/>[Container de administração]"]
+    end
+
+    aluno -- "usa (HTTPS)" --> spa
+    spa -- "chama (REST/JSON)" --> core
+    core -- "lê e grava (JPA)" --> db
+    admin -- "administra" --> pgadmin
+    pgadmin -- "SQL" --> db
+```
+
+Impacto da decisão: nenhum container novo foi criado. A mudança é interna ao Core e será detalhada
+no C4 Component do Desafio 2.
 
 ## 9. Mini-lab - evidência arquitetural
 
@@ -194,11 +218,34 @@ O que os números mostram sobre a capacidade **Matrícula**:
 
 ### 9.3 Estrutura depois (alvo do mini-lab)
 
-_Em elaboração._
+```
+org/example/grupo_7_praticaatdd/
+├── matricula/
+│   ├── api/            MatriculaRestController  MatriculaRequestDTO  MatriculaResponseDTO  NotaRequestDTO
+│   ├── application/    MatriculaService
+│   └── internal/       MatriculaEntity  MatriculaRepository
+├── ranking/
+│   ├── api/            RankingRestController  RankingResponseDTO
+│   ├── application/    RankingService
+│   └── internal/       RankingRepository
+├── domain/             núcleo da AC1, compartilhado e coberto por TDD
+└── controller/ service/ repository/ entity/ dto/   usuario e curso, ainda em camadas
+```
+
+Regras de fronteira que serão verificadas por testes ArchUnit:
+
+- nenhuma classe fora de `matricula` acessa `matricula.internal`;
+- nenhuma classe fora de `ranking` acessa `ranking.internal`;
+- o `domain` não depende de Spring nem de JPA.
 
 ### 9.4 O que comparar
 
-_Em elaboração._
+| Evidência | Antes | Depois / resultado esperado |
+|---|---|---|
+| Organização | Por camada técnica: Matrícula em 6 pacotes. | Por capacidade de negócio: Matrícula e Ranking em um pacote cada. |
+| Dependências | Classes de capacidades distintas se misturam nas mesmas camadas; acesso livre à persistência de outras capacidades. | Dependências entre módulos ficam explícitas, ocorrem por contratos (`api`/`application`) e são verificadas por ArchUnit. |
+| Testes | Só o `domain` tem testes; a API não tem rede de segurança. | Testes MockMvc da matrícula escritos antes da reorganização passam iguais depois; testes concentrados por módulo. |
+| Evolução futura | Extrair o Ranking exigiria reorganizar várias camadas. | Ranking possui fronteira clara para futura extração, se necessária. |
 
 ### 9.5 Como reproduzir
 
@@ -213,15 +260,47 @@ jdeps -verbose:class -filter:none target/classes
 
 ## 10. Evidências a versionar
 
-_Em elaboração._
+| Evidência | Situação |
+|---|---|
+| README arquitetural com RF → RNF → ASR → RPC → alternativas → decisão | Feito (este documento) |
+| ADR-001 com decisão e trade-offs | Feito (seção 7) |
+| C4 Container atualizado | Feito (seção 8) |
+| Estrutura e dependências **antes** | Feito: [antes-dependencias.txt](docs/evidencias/desafio-1/antes-dependencias.txt) |
+| Testes MockMvc da matrícula antes da reorganização | Pendente |
+| Código da modularização da Matrícula e do módulo Ranking (RF01) | Pendente |
+| Estrutura e dependências **depois** + regras ArchUnit | Pendente |
+| Testes executados após a refatoração, demonstrando preservação do comportamento | Pendente |
 
 ## 11. Conclusão
 
-_Em elaboração._
+A equipe decidiu evoluir o Core para Monólito Modular, de forma incremental. A medição do "antes"
+confirma o problema que motiva a decisão: a capacidade Matrícula está espalhada em seis pacotes
+técnicos e o seu service acessa diretamente a persistência de outras capacidades, sem nenhuma
+fronteira que impeça esse acoplamento.
+
+A extração do Ranking para um serviço independente não foi adotada neste momento porque o cenário
+informa crescimento, mas ainda não fornece evidência de gargalo nem necessidade comprovada de deploy
+independente. Essa decisão deverá ser revisitada quando métricas de carga, latência, throughput ou
+frequência de deploy justificarem o custo adicional de distribuição. Essas métricas passam a ser
+coletadas no Desafio 6.
+
+O mini-lab vai comprovar se a reorganização reduz o acoplamento estrutural sem alterar o
+comportamento funcional; esta conclusão será completada com o resultado do "depois".
 
 ## 12. Rastreabilidade final
 
-_Em elaboração._
+| Elemento | Resposta resumida |
+|---|---|
+| RF | RF01 Ranking (novo) e RF02 Conquistas (créditos da AC1, Premium e moedas a evoluir). |
+| RNF | Manutenibilidade, escalabilidade, testabilidade, desempenho e complexidade operacional foram analisados. |
+| ASR | Manutenibilidade, escalabilidade e complexidade operacional. |
+| RPC | Spring Boot, 6 desenvolvedores, PostgreSQL, legado da AC1 com `domain` coberto por TDD, um único Docker Compose. |
+| Alternativas | Monólito em Camadas × Monólito Modular × serviços independentes. |
+| ADR | ADR-001: adotar Monólito Modular de forma incremental. |
+| C4 | Core permanece um container; a organização interna passa a ser modular. |
+| Evidência | Medição de dependências antes/depois com `jdeps`, regras ArchUnit e testes preservando o comportamento. |
+
+**Regra de leitura:** RF/RNF → ASR + RPC → alternativas → ADR → C4 → evidência.
 
 ---
 
