@@ -1,0 +1,84 @@
+# Desafio 1 - estrutura e dependencias ANTES (arquitetura em camadas da AC1)
+# Gerado em 2026-10-28 a partir da tag ac1-final
+# Comando: jdeps -verbose:class -filter:none target/classes (apos ./mvnw compile)
+
+## Estrutura de pacotes
+Grupo7PraticaAtddApplication.java
+config/OpenApiConfig.java
+controller/ApiExceptionHandler.java
+controller/CursoRestController.java
+controller/MatriculaRestController.java
+controller/UsuarioRestController.java
+domain/Assinatura.java
+domain/Curso.java
+domain/Matricula.java
+domain/StatusMatricula.java
+domain/Usuario.java
+dto/CursoRequestDTO.java
+dto/CursoResponseDTO.java
+dto/MatriculaRequestDTO.java
+dto/MatriculaResponseDTO.java
+dto/NotaRequestDTO.java
+dto/UsuarioRequestDTO.java
+dto/UsuarioResponseDTO.java
+entity/CursoEntity.java
+entity/MatriculaEntity.java
+entity/UsuarioEntity.java
+repository/CursoRepository.java
+repository/MatriculaRepository.java
+repository/UsuarioRepository.java
+service/CursoService.java
+service/MatriculaService.java
+service/UsuarioService.java
+
+## Dependencias entre pacotes (quantidade de pares classe -> classe)
+      7 controller -> dto
+      3 controller -> service
+      1 entity -> domain
+      3 repository -> entity
+      5 service -> domain
+      3 service -> dto
+      5 service -> entity
+      5 service -> repository
+
+## Dependencias classe -> classe
+controller.CursoRestController dto.CursoRequestDTO
+controller.CursoRestController dto.CursoResponseDTO
+controller.CursoRestController service.CursoService
+controller.MatriculaRestController dto.MatriculaRequestDTO
+controller.MatriculaRestController dto.MatriculaResponseDTO
+controller.MatriculaRestController dto.NotaRequestDTO
+controller.MatriculaRestController service.MatriculaService
+controller.UsuarioRestController dto.UsuarioRequestDTO
+controller.UsuarioRestController dto.UsuarioResponseDTO
+controller.UsuarioRestController service.UsuarioService
+domain.Matricula domain.Curso
+domain.Matricula domain.StatusMatricula
+domain.Matricula domain.Usuario
+domain.Usuario domain.Assinatura
+domain.Usuario domain.Curso
+domain.Usuario domain.Matricula
+entity.MatriculaEntity domain.StatusMatricula
+entity.MatriculaEntity entity.CursoEntity
+entity.MatriculaEntity entity.UsuarioEntity
+repository.CursoRepository entity.CursoEntity
+repository.MatriculaRepository entity.MatriculaEntity
+repository.UsuarioRepository entity.UsuarioEntity
+service.CursoService dto.CursoResponseDTO
+service.CursoService entity.CursoEntity
+service.CursoService repository.CursoRepository
+service.MatriculaService domain.Assinatura
+service.MatriculaService domain.Curso
+service.MatriculaService domain.Matricula
+service.MatriculaService domain.StatusMatricula
+service.MatriculaService domain.Usuario
+service.MatriculaService dto.MatriculaResponseDTO
+service.MatriculaService entity.CursoEntity
+service.MatriculaService entity.MatriculaEntity
+service.MatriculaService entity.UsuarioEntity
+service.MatriculaService repository.CursoRepository
+service.MatriculaService repository.MatriculaRepository
+service.MatriculaService repository.UsuarioRepository
+service.UsuarioService dto.UsuarioResponseDTO
+service.UsuarioService entity.UsuarioEntity
+service.UsuarioService repository.UsuarioRepository

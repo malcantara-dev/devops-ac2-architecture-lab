@@ -91,11 +91,41 @@ modularização torna as fronteiras e dependências mais explícitas **sem alter
 
 ### 9.1 Estrutura antes (tag `ac1-final`)
 
-_Em elaboração._
+```
+org/example/grupo_7_praticaatdd/
+├── controller/  CursoRestController  MatriculaRestController  UsuarioRestController  ApiExceptionHandler
+├── service/     CursoService  MatriculaService  UsuarioService
+├── repository/  CursoRepository  MatriculaRepository  UsuarioRepository
+├── entity/      CursoEntity  MatriculaEntity  UsuarioEntity
+├── dto/         CursoRequestDTO  CursoResponseDTO  MatriculaRequestDTO  MatriculaResponseDTO
+│                NotaRequestDTO  UsuarioRequestDTO  UsuarioResponseDTO
+├── domain/      Assinatura  Curso  Matricula  StatusMatricula  Usuario
+└── config/      OpenApiConfig
+```
 
 ### 9.2 Dependências antes (medidas com `jdeps`)
 
-_Em elaboração._
+Coletado sobre as classes compiladas da tag `ac1-final`. Arquivo completo:
+[docs/evidencias/desafio-1/antes-dependencias.txt](docs/evidencias/desafio-1/antes-dependencias.txt).
+
+| De → Para | Pares classe → classe |
+|---|---|
+| controller → dto | 7 |
+| controller → service | 3 |
+| service → domain | 5 |
+| service → entity | 5 |
+| service → repository | 5 |
+| service → dto | 3 |
+| repository → entity | 3 |
+| entity → domain | 1 |
+
+O que os números mostram sobre a capacidade **Matrícula**:
+
+- Ela está espalhada em **9 classes distribuídas em 6 pacotes** (`controller`, `dto`, `service`,
+  `entity`, `repository`, `domain`).
+- O `MatriculaService` depende diretamente de **3 repositórios e 3 entidades**, incluindo os de
+  Usuário e Curso. Nada na estrutura impede que qualquer classe acesse a persistência de outra
+  capacidade.
 
 ### 9.3 Estrutura depois (alvo do mini-lab)
 
@@ -107,7 +137,14 @@ _Em elaboração._
 
 ### 9.5 Como reproduzir
 
-_Em elaboração._
+```bash
+# compilar e medir as dependências
+./mvnw -q -DskipTests compile
+jdeps -verbose:class -filter:none target/classes
+
+# rodar todos os testes (domínio, API e regras de arquitetura)
+./mvnw test
+```
 
 ## 10. Evidências a versionar
 
