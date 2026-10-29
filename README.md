@@ -54,31 +54,96 @@ RFs, RNFs, ASRs e RPCs, comparando alternativas e sustentando a escolha com evid
 
 ## 1. Leitura do cenário
 
-_Em elaboração._
+O MVP da AC1 foi pensado para poucos usuários. No B1 ele cresce de aproximadamente 1.000 para até
+**100.000 usuários**. Ranking, cursos, conquistas e recompensas continuam no Core, mas o **Ranking
+tende a crescer mais** que as demais capacidades, porque é uma consulta que todo aluno faz com
+frequência e que compara todos os alunos entre si.
+
+Hoje o Core é um monólito em camadas técnicas. Cada capacidade de negócio fica espalhada pelas seis
+camadas: para entender ou mudar a matrícula, por exemplo, é preciso passar por `controller`, `dto`,
+`service`, `entity`, `repository` e `domain`. Isso funcionou bem para o tamanho da AC1, mas é o
+ponto que mais pesa quando o produto começa a crescer de forma desigual.
+
+> **Pergunta do Tech Lead:** há evidência suficiente para introduzir distribuição e deploy
+> independente agora, ou uma modularização interna resolve o problema com menor custo operacional?
+
+A decisão não parte da tecnologia desejada, e sim dos drivers que realmente justificam mudança
+estrutural.
 
 ## 2. RFs afetados
 
-_Em elaboração._
+| ID | Requisito funcional | Situação no legado | Impacto no desafio |
+|---|---|---|---|
+| RF01 | Ranking de alunos | Não existe na AC1 | Capacidade nova e com carga que tende a crescer mais; precisa nascer com fronteira clara e ser mensurável. |
+| RF02 | Conquistas / gamificação | Parcial: créditos por conclusão e desbloqueio bônus (cenários 1, 2, 5 e 6). Premium após 12 cursos e moedas ainda não existem | As regras de créditos, Premium, moedas e recompensas continuam evoluindo e precisam de fronteiras claras. |
+| - | Funcionalidades existentes: matrícula, conclusão, nota parcial, desbloqueio | Implementadas em camadas | Precisam continuar funcionando sem mudança de comportamento durante a evolução. |
 
 ## 3. RNFs e seleção dos ASRs
 
-_Em elaboração._
+Nem todo RNF é automaticamente um ASR. Foram selecionados apenas os atributos capazes de mudar a
+estrutura, a implantação ou a operação do Core (máximo de 3).
+
+| RNF (FURPS+) | ASR? | Justificativa arquitetural |
+|---|---|---|
+| Manutenibilidade (Supportability) | **SIM** | As capacidades evoluem em ritmos diferentes: Ranking é novo, a gamificação vai ganhar Premium e moedas, a matrícula está estável. Com a organização por camada técnica, qualquer mudança atravessa seis pacotes. Fronteiras por capacidade mudam a **estrutura** do código e reduzem o impacto de cada mudança. |
+| Escalabilidade (Performance) | **SIM** | O Ranking tem crescimento de carga diferente das demais capacidades e pode exigir estratégia própria no futuro (cache, réplica de leitura ou extração). Isso pode mudar a **implantação**, então a fronteira do Ranking precisa existir desde já. |
+| Complexidade operacional (+ restrição de equipe) | **SIM** | Uma equipe de 6 pessoas teria de absorver vários deploys, rede, contratos, observabilidade e falhas distribuídas se serviços fossem criados agora. Isso muda a **operação** e é o principal freio à distribuição. |
+| Desempenho (Performance) | NÃO, neste momento | É relevante, mas a AC1 nunca mediu latência nem throughput e o cenário não traz nenhuma medição que prove gargalo arquitetural. Sem medição, não há como ele dirigir a decisão. |
+| Testabilidade (Supportability) | NÃO como driver macro | É importante e vai melhorar com a modularização (testes por capacidade), mas sozinha não determina a decomposição. O `domain` já tem 100% de cobertura; o que falta são testes das camadas de aplicação, o que não exige mudar a arquitetura macro. |
 
 ## 4. RPCs - restrições e premissas
 
-_Em elaboração._
+| RPC | Consequência para a decisão |
+|---|---|
+| Core atual em Java/Spring Boot (Spring Boot 4.1, Java 17, build e CI com JDK 21) | A evolução deve preservar o investimento e o legado existentes. |
+| Equipe de 6 desenvolvedores | A solução deve manter a complexidade operacional proporcional à capacidade da equipe. |
+| Banco relacional existente (PostgreSQL 16, com H2 para estudo) | Não há justificativa, neste desafio, para trocar a tecnologia de dados apenas por modernização. |
+| Legado da AC1: `domain` puro coberto 100% por TDD (cenários 1 a 6) | A solução deve evoluir de forma incremental, sem reescrita integral e sem quebrar os testes que provam as regras de negócio. |
+| Um único Docker Compose (app + PostgreSQL + pgAdmin) e um pipeline no GitHub Actions | Qualquer novo processo implantável aumenta diretamente o custo de build, deploy e operação. |
 
 ## 5. Alternativas e trade-offs
 
-_Em elaboração._
+| Alternativa | Benefícios | Custos / riscos | Avaliação |
+|---|---|---|---|
+| A - Monólito em Camadas (manter a AC1) | Nenhum custo de mudança; baixa complexidade operacional; continuidade imediata. | A organização por camada técnica espalha cada capacidade em seis pacotes e tende a aumentar o acoplamento entre capacidades conforme o produto cresce. O Ranking nasceria misturado às demais. | Possível, mas pouco preparada para a evolução prevista. |
+| B - Monólito Modular | Fronteiras por capacidade; continua um único jar, um container, um banco e um pipeline; facilita testes, manutenção e futura extração seletiva. | Reorganização de pacotes; ainda compartilha processo de execução, banco e deploy; fronteiras precisam ser verificadas para não virarem só pastas. | Melhor equilíbrio entre os ASRs e as RPCs. |
+| C - Serviços independentes (ex.: Ranking como microsserviço) | Permite escala e deploy independentes por capacidade. | Rede, contratos entre serviços, observabilidade distribuída, tolerância a falhas, consistência de dados entre bancos e maior custo operacional para a equipe. | Prematura sem evidência de necessidade de independência. |
 
 ## 6. Decisão do Tech Lead
 
-_Em elaboração._
+> **DECISÃO: evoluir o Core para um MONÓLITO MODULAR, de forma incremental.**
+
+O Core continua sendo uma única aplicação Spring Boot, mas passa a ser organizado por capacidade de
+negócio. A evolução começa por duas capacidades:
+
+- **Matrícula**, funcionalidade que veio da AC1, é reorganizada como o primeiro módulo
+  (`matricula/api`, `matricula/application`, `matricula/internal`), sem mudar comportamento.
+- **Ranking (RF01)** já nasce como módulo, com fronteira própria, e é tratado como **candidato
+  explícito à extração futura**. Ele não vira microsserviço apenas pela previsão de crescimento.
+
+As demais capacidades (usuário, curso) continuam no formato em camadas e migram quando forem
+alteradas. O pacote `domain` da AC1 permanece como núcleo compartilhado, preservando os testes do
+TDD.
+
+**Racional:** a modularização atende principalmente manutenibilidade e controle da complexidade
+operacional e, ao mesmo tempo, cria uma fronteira adequada para observar o ASR de escalabilidade. A
+decomposição em serviço será reavaliada somente se métricas demonstrarem necessidade de escala ou de
+deploy independente.
 
 ## 7. ADR-001 - Evolução do Core
 
-_Em elaboração._
+| Campo | Registro |
+|---|---|
+| Título | ADR-001 - Evoluir o Core de Monólito em Camadas para Monólito Modular |
+| Status | Aceito |
+| Contexto | O produto cresce para até 100.000 usuários; o Ranking (RF01) é uma capacidade nova com crescimento de carga diferente; as regras de gamificação (RF02) continuam evoluindo; no legado cada capacidade está espalhada por seis camadas técnicas. |
+| ASRs | Manutenibilidade; Escalabilidade; Complexidade operacional. |
+| RPCs | Java/Spring Boot; equipe de 6 desenvolvedores; banco relacional PostgreSQL; legado da AC1 com `domain` coberto por TDD; um único Docker Compose. |
+| Alternativas | A) Monólito em Camadas; B) Monólito Modular; C) decomposição seletiva em serviços. |
+| Decisão | Adotar Monólito Modular de forma incremental: Matrícula vira o primeiro módulo, Ranking nasce módulo e preserva a fronteira para eventual extração futura. |
+| Consequências positivas | Melhor separação de responsabilidades; menor acoplamento entre capacidades; evolução incremental sem reescrita; custo operacional igual ao atual e muito menor que o de microsserviços. |
+| Trade-offs | Deploy ainda conjunto; processo e banco compartilhados; Ranking ainda não possui escala independente; durante a transição convivem módulos e camadas. |
+| Gatilho de revisão | Reavaliar a extração do Ranking quando métricas mostrarem gargalo, necessidade de escala própria ou de deploy independente. |
 
 ## 8. C4 - visão de Container
 
@@ -164,6 +229,9 @@ _Em elaboração._
 
 | ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
 |---|---|---|---|---|---|---|---|
+| Manutenibilidade | ✔ | | | | | | Dependências antes/depois (`jdeps`) e regras ArchUnit |
+| Escalabilidade | ✔ | | | | | | Fronteira do Ranking; latência do ranking a medir no D6 |
+| Complexidade operacional | ✔ | | | | | | Continua 1 container de aplicação, 1 banco e 1 pipeline |
 
 # Desafios seguintes
 
