@@ -1,210 +1,337 @@
-# AC1 ATDD Grupo 7
+# AC2 - B1 Architecture Lab - Grupo 7
 
-Projeto AC1 de ATDD em Spring Boot e Docker.
+Registro arquitetural vivo da AC2 (Exercício B1 - Architecture Lab). O produto é o MVP de
+**Gamificação para Educação Continuada** construído na AC1. No B1 ele passa a receber crescimento
+de usuários, IA, eventos, IoT e exigências de operação. Em cada desafio a equipe assume o papel de
+Tech Lead e justifica a decisão antes de mexer no código, seguindo sempre a mesma cadeia:
 
-O ciclo foi conduzido de fora para dentro: primeiro as User Stories, depois os cenários BDD
-como critérios de aceitação, depois o TDD (RED, GREEN, BLUE) sobre o pacote domain e, por
-último, as camadas de aplicação (Entity, Repository, Service, DTO, Controller), o Swagger,
-o front-end em Vue.js e a execução via Docker.
+```
+RF → RNF → ASR + RPC → alternativas/trade-offs → ADR → C4 → evidência
+```
 
-## Integrantes
+## Equipe
 
-| Integrante | Cenários BDD/TDD implementados |
-|---|---|
-| Matheus de Alcantara | Cenários 1 e 2 |
-| Rafael Silva Fiamengue | Cenários 3 e 4 |
-| Henrique Bicudo Paulino | Cenários 5 e 6 |
+- Matheus de Alcantara
+- Rafael Silva Fiamengue
+- Henrique Bicudo Paulino
 
-## Descrição do estudo de caso
+### Papéis por desafio
 
-**Gamificação para engajamento de educação continuada**
-
-Uma determinada plataforma vende cursos online e EAD no modelo de assinaturas. O aluno paga um
-valor mensal e tem acesso a um conjunto de cursos para assinatura básica. A cada curso terminado
-e com média acima de 7,0, o aluno tem direito a realização de mais 3 cursos. O aluno que escrever
-mais tópicos no fórum e ajudar outros participantes com seus comentários, ganha um curso no final
-do mês. Quando o aluno conquistar 12 cursos, seu plano de assinatura passa a ser "Premium" e ele
-passa a receber voucher para participar de projetos reais, durante os cursos, e receber 3 moedas,
-que podem ser convertidas em conhecimento (novos cursos), acumular ou receber por criptomoeda.
-
-## User Stories
-
-Uma US por integrante, conforme a planilha `Tabela_US_BDD_TDD.xlsx` (aba `pb`).
-
-| # | Redigida por | User Story |
-|---|---|---|
-| US2 | Matheus de Alcantara | **COMO** Usuário/Aluno **QUERO** visualizar quais cursos tenho acesso no meu plano atual **PARA** acessá-los e realizá-los |
-| US3 | Henrique Bicudo Paulino | **COMO** Usuário/Aluno **QUERO** visualizar as notas médias dos meus cursos concluídos **PARA** verificar se tenho direito a mais 3 cursos gratuitos |
-| US4 | Rafael Silva Fiamengue | **COMO** Usuário/Aluno **QUERO** visualizar a quantidade de cursos concluídos **PARA** verificar meu progresso da melhoria gratuita para o plano Premium |
-
-> A US1 que aparece na planilha ("COMO Administrador de um Sistema de Gestão de Jogos...") é o
-> exemplo-modelo passado em aula e não faz parte das US do grupo.
-
-### US escolhida para implementação
-
-**US3, redigida por Henrique Bicudo Paulino.**
-
-> COMO Usuário/Aluno QUERO visualizar as notas médias dos meus cursos concluídos PARA verificar
-> se tenho direito a mais 3 cursos gratuitos.
-
-Motivo da escolha: é a US que concentra a regra central do estudo de caso, ou seja, a nota do
-curso concluído define o direito aos créditos de curso gratuito. Os seis cenários BDD do grupo
-derivam dessa regra: dois validam o crédito na conclusão, dois garantem que curso em andamento
-não gera crédito, e dois cobrem o consumo do crédito no desbloqueio de um novo curso.
-
-## BDD - cenários de aceitação
-
-Todos os cenários estão na planilha `Tabela_US_BDD_TDD.xlsx` e foram implementados como testes
-automatizados em `src/test/java/.../domain`.
-
-| Cenário | Escrito por | Given / When / Then | Classe de teste |
+| Desafio | Mini-lab (código + evidência) | Decisão + ADR | C4 |
 |---|---|---|---|
-| 1 | Matheus de Alcantara | **Dado** um curso concluído **E** a nota do usuário para aquele curso é >= 7 **Quando** este curso é finalizado **Então** mais 3 créditos de curso gratuito devem ser acrescentados para o usuário | [ConclusaoCursoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/ConclusaoCursoTest.java) |
-| 2 | Matheus de Alcantara | **Dado** um curso concluído **E** a nota do usuário para aquele curso é < 7 **Quando** este curso é finalizado **Então** nenhum crédito de curso gratuito é adicionado para o usuário | [ConclusaoCursoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/ConclusaoCursoTest.java) |
-| 3 | Rafael Silva Fiamengue | **Dado** um curso em andamento **Quando** existe apenas 1 curso em andamento **E** não existe nenhum curso finalizado pelo usuário **Então** o usuário deve ter 0 créditos de curso gratuito | [CursoEmAndamentoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/CursoEmAndamentoTest.java) |
-| 4 | Rafael Silva Fiamengue | **Dado** um curso em andamento **E** a média parcial deste curso é >= 7 **Quando** o curso ainda não foi finalizado **Então** nenhum crédito de curso gratuito é adicionado para o usuário | [CursoEmAndamentoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/CursoEmAndamentoTest.java) |
-| 5 | Henrique Bicudo Paulino | **Dado** um curso não adquirido **Quando** o usuário solicitar o desbloqueio deste curso **E** o usuário possui >= 1 crédito **Então** este curso é liberado e adicionado à biblioteca do usuário **E** um crédito é consumido | [DesbloqueioCursoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/DesbloqueioCursoTest.java) |
-| 6 | Henrique Bicudo Paulino | **Dado** um curso não adquirido **Quando** o usuário solicitar o desbloqueio deste curso **E** o usuário possui < 1 crédito **Então** este curso não é liberado **E** um aviso de "créditos insuficientes" é exibido | [DesbloqueioCursoTest.java](src/test/java/org/example/grupo_7_praticaatdd/domain/DesbloqueioCursoTest.java) |
+| D1 - Drivers e evolução do Core | Matheus | Rafael | Henrique |
+| D2 - Organização interna do Core | Rafael | Henrique | Matheus |
+| D3 - Serviço Python e IA | Henrique | Matheus | Rafael |
+| D4 - Comunicação e eventos | Rafael | Henrique | Matheus |
+| D5 - IoT e MQTT | Henrique | Matheus | Rafael |
+| D6 - CI/CD e observabilidade | Matheus | Rafael | Henrique |
 
-## TDD - evidências do ciclo RED, GREEN e BLUE
+## Ponto de partida: o legado da AC1
 
-O pacote de produção é `src/main/java/.../domain` e o pacote de testes é
-`src/test/java/.../domain`, na mesma estrutura usada no exercício da Calculadora.
+Este repositório começou como cópia do repositório da AC1
+([malcantara-dev/devops-ac1-atdd](https://github.com/malcantara-dev/devops-ac1-atdd)), com todo o
+histórico. A tag `ac1-final` marca exatamente o estado entregue na AC1, que é o "antes" de todas as
+decisões abaixo. A documentação original da AC1 (User Stories, BDD, TDD e evidências) foi movida
+para [docs/ac1/README.md](docs/ac1/README.md).
 
-Cada integrante trabalhou em uma branch própria e os prints de cada fase estão versionados:
+O que o legado entrega hoje:
 
-| Fase | O que foi feito | Prints |
+- Spring Boot 4.1 (Java 17) organizado em camadas técnicas: `controller`, `service`, `repository`,
+  `entity`, `dto` e `config`.
+- Um pacote `domain` puro (sem framework) com as regras nascidas do TDD: crédito de 3 cursos ao
+  concluir com nota >= 7, curso em andamento não gera crédito e desbloqueio de curso bônus
+  consumindo crédito (cenários 1 a 6, cobertura de 100% no `domain`).
+- API REST com Swagger, front-end em Vue.js servido pela própria aplicação, H2 para estudo e
+  PostgreSQL + pgAdmin via Docker Compose.
+- Testes rodando no GitHub Actions a cada push, com relatório do JaCoCo.
+
+---
+
+# Desafio 1 - Drivers e evolução do Core
+
+**Papel: Tech Lead.** Decidir a arquitetura macro do Core antes de decompor o sistema, a partir dos
+RFs, RNFs, ASRs e RPCs, comparando alternativas e sustentando a escolha com evidência técnica.
+
+## 1. Leitura do cenário
+
+O MVP da AC1 foi pensado para poucos usuários. No B1 ele cresce de aproximadamente 1.000 para até
+**100.000 usuários**. Ranking, cursos, conquistas e recompensas continuam no Core, mas o **Ranking
+tende a crescer mais** que as demais capacidades, porque é uma consulta que todo aluno faz com
+frequência e que compara todos os alunos entre si.
+
+Hoje o Core é um monólito em camadas técnicas. Cada capacidade de negócio fica espalhada pelas seis
+camadas: para entender ou mudar a matrícula, por exemplo, é preciso passar por `controller`, `dto`,
+`service`, `entity`, `repository` e `domain`. Isso funcionou bem para o tamanho da AC1, mas é o
+ponto que mais pesa quando o produto começa a crescer de forma desigual.
+
+> **Pergunta do Tech Lead:** há evidência suficiente para introduzir distribuição e deploy
+> independente agora, ou uma modularização interna resolve o problema com menor custo operacional?
+
+A decisão não parte da tecnologia desejada, e sim dos drivers que realmente justificam mudança
+estrutural.
+
+## 2. RFs afetados
+
+| ID | Requisito funcional | Situação no legado | Impacto no desafio |
+|---|---|---|---|
+| RF01 | Ranking de alunos | Não existe na AC1 | Capacidade nova e com carga que tende a crescer mais; precisa nascer com fronteira clara e ser mensurável. |
+| RF02 | Conquistas / gamificação | Parcial: créditos por conclusão e desbloqueio bônus (cenários 1, 2, 5 e 6). Premium após 12 cursos e moedas ainda não existem | As regras de créditos, Premium, moedas e recompensas continuam evoluindo e precisam de fronteiras claras. |
+| - | Funcionalidades existentes: matrícula, conclusão, nota parcial, desbloqueio | Implementadas em camadas | Precisam continuar funcionando sem mudança de comportamento durante a evolução. |
+
+## 3. RNFs e seleção dos ASRs
+
+Nem todo RNF é automaticamente um ASR. Foram selecionados apenas os atributos capazes de mudar a
+estrutura, a implantação ou a operação do Core (máximo de 3).
+
+| RNF (FURPS+) | ASR? | Justificativa arquitetural |
 |---|---|---|
-| RED | Testes dos cenários escritos antes da implementação, falhando no IntelliJ e no GitHub Actions | `printsTestes/*/01-red-intellij.png` e `02-red-actions.png` |
-| GREEN | Implementação mínima no domínio até os testes passarem, com o relatório de cobertura do JaCoCo | `printsTestes/*/03-green-intellij.png`, `04-green-actions.png` e `05-*jacoco*.png` |
-| BLUE | Refatoração sem quebrar teste: extração de constantes (`NOTA_MINIMA_APROVACAO`, `CREDITOS_POR_CONCLUSAO`), centralização da mensagem de crédito insuficiente e extração do método `estaEmAndamento` | `printsTestes/*/06-blue-intellij.png` e `07-blue-jacoco.png` |
+| Manutenibilidade (Supportability) | **SIM** | As capacidades evoluem em ritmos diferentes: Ranking é novo, a gamificação vai ganhar Premium e moedas, a matrícula está estável. Com a organização por camada técnica, qualquer mudança atravessa seis pacotes. Fronteiras por capacidade mudam a **estrutura** do código e reduzem o impacto de cada mudança. |
+| Escalabilidade (Performance) | **SIM** | O Ranking tem crescimento de carga diferente das demais capacidades e pode exigir estratégia própria no futuro (cache, réplica de leitura ou extração). Isso pode mudar a **implantação**, então a fronteira do Ranking precisa existir desde já. |
+| Complexidade operacional (+ restrição de equipe) | **SIM** | Uma equipe de 6 pessoas teria de absorver vários deploys, rede, contratos, observabilidade e falhas distribuídas se serviços fossem criados agora. Isso muda a **operação** e é o principal freio à distribuição. |
+| Desempenho (Performance) | NÃO, neste momento | É relevante, mas a AC1 nunca mediu latência nem throughput e o cenário não traz nenhuma medição que prove gargalo arquitetural. Sem medição, não há como ele dirigir a decisão. |
+| Testabilidade (Supportability) | NÃO como driver macro | É importante e vai melhorar com a modularização (testes por capacidade), mas sozinha não determina a decomposição. O `domain` já tem 100% de cobertura; o que falta são testes das camadas de aplicação, o que não exige mudar a arquitetura macro. |
 
-Pastas de prints por integrante:
+## 4. RPCs - restrições e premissas
 
-- [printsTestes/cenarios-01-02-alcantara/](printsTestes/cenarios-01-02-alcantara/)
-- [printsTestes/cenarios-03-04-rafael/](printsTestes/cenarios-03-04-rafael/)
-- [printsTestes/cenarios-05-06-henrique/](printsTestes/cenarios-05-06-henrique/)
+| RPC | Consequência para a decisão |
+|---|---|
+| Core atual em Java/Spring Boot (Spring Boot 4.1, Java 17, build e CI com JDK 21) | A evolução deve preservar o investimento e o legado existentes. |
+| Equipe de 6 desenvolvedores | A solução deve manter a complexidade operacional proporcional à capacidade da equipe. |
+| Banco relacional existente (PostgreSQL 16, com H2 para estudo) | Não há justificativa, neste desafio, para trocar a tecnologia de dados apenas por modernização. |
+| Legado da AC1: `domain` puro coberto 100% por TDD (cenários 1 a 6) | A solução deve evoluir de forma incremental, sem reescrita integral e sem quebrar os testes que provam as regras de negócio. |
+| Um único Docker Compose (app + PostgreSQL + pgAdmin) e um pipeline no GitHub Actions | Qualquer novo processo implantável aumenta diretamente o custo de build, deploy e operação. |
 
-O workflow [.github/workflows/testes.yml](.github/workflows/testes.yml) roda os testes e publica
-os relatórios do Surefire e do JaCoCo a cada push e pull request.
+## 5. Alternativas e trade-offs
 
-### Cobertura e complexidade ao final do BLUE
+| Alternativa | Benefícios | Custos / riscos | Avaliação |
+|---|---|---|---|
+| A - Monólito em Camadas (manter a AC1) | Nenhum custo de mudança; baixa complexidade operacional; continuidade imediata. | A organização por camada técnica espalha cada capacidade em seis pacotes e tende a aumentar o acoplamento entre capacidades conforme o produto cresce. O Ranking nasceria misturado às demais. | Possível, mas pouco preparada para a evolução prevista. |
+| B - Monólito Modular | Fronteiras por capacidade; continua um único jar, um container, um banco e um pipeline; facilita testes, manutenção e futura extração seletiva. | Reorganização de pacotes; ainda compartilha processo de execução, banco e deploy; fronteiras precisam ser verificadas para não virarem só pastas. | Melhor equilíbrio entre os ASRs e as RPCs. |
+| C - Serviços independentes (ex.: Ranking como microsserviço) | Permite escala e deploy independentes por capacidade. | Rede, contratos entre serviços, observabilidade distribuída, tolerância a falhas, consistência de dados entre bancos e maior custo operacional para a equipe. | Prematura sem evidência de necessidade de independência. |
 
-Escopo avaliado: o pacote `domain`, que é o código escrito pelos integrantes no ciclo TDD.
+## 6. Decisão do Tech Lead
 
-| Classe | Instruções | Branches |
-|---|---|---|
-| Assinatura | 48/48 | 2/2 |
-| Curso | 9/9 | - |
-| Matricula | 65/65 | 6/6 |
-| StatusMatricula | 15/15 | - |
-| Usuario | 65/65 | 2/2 |
+> **DECISÃO: evoluir o Core para um MONÓLITO MODULAR, de forma incremental.**
 
-Cobertura de 100% no pacote `domain`, sem vermelho e sem amarelo.
-Print: [printsEvidencias/07-jacoco-blue-100.png](printsEvidencias/07-jacoco-blue-100.png)
+O Core continua sendo uma única aplicação Spring Boot, mas passa a ser organizado por capacidade de
+negócio. A evolução começa por duas capacidades:
 
-A maior complexidade ciclomática entre os métodos escritos pelo grupo é **3**
-(`Matricula.concluidoComAproveitamento`), dentro do limite de 7.
+- **Matrícula**, funcionalidade que veio da AC1, é reorganizada como o primeiro módulo
+  (`matricula/api`, `matricula/application`, `matricula/internal`), sem mudar comportamento.
+- **Ranking (RF01)** já nasce como módulo, com fronteira própria, e é tratado como **candidato
+  explícito à extração futura**. Ele não vira microsserviço apenas pela previsão de crescimento.
 
-As camadas de aplicação (Controller, Service, Repository, DTO e Entity) ficam fora desse escopo
-de cobertura, pois foram construídas depois do ciclo TDD, a partir do projeto de referência.
+As demais capacidades (usuário, curso) continuam no formato em camadas e migram quando forem
+alteradas. O pacote `domain` da AC1 permanece como núcleo compartilhado, preservando os testes do
+TDD.
 
-## Arquitetura
+**Racional:** a modularização atende principalmente manutenibilidade e controle da complexidade
+operacional e, ao mesmo tempo, cria uma fronteira adequada para observar o ASR de escalabilidade. A
+decomposição em serviço será reavaliada somente se métricas demonstrarem necessidade de escala ou de
+deploy independente.
+
+## 7. ADR-001 - Evolução do Core
+
+| Campo | Registro |
+|---|---|
+| Título | ADR-001 - Evoluir o Core de Monólito em Camadas para Monólito Modular |
+| Status | Aceito |
+| Contexto | O produto cresce para até 100.000 usuários; o Ranking (RF01) é uma capacidade nova com crescimento de carga diferente; as regras de gamificação (RF02) continuam evoluindo; no legado cada capacidade está espalhada por seis camadas técnicas. |
+| ASRs | Manutenibilidade; Escalabilidade; Complexidade operacional. |
+| RPCs | Java/Spring Boot; equipe de 6 desenvolvedores; banco relacional PostgreSQL; legado da AC1 com `domain` coberto por TDD; um único Docker Compose. |
+| Alternativas | A) Monólito em Camadas; B) Monólito Modular; C) decomposição seletiva em serviços. |
+| Decisão | Adotar Monólito Modular de forma incremental: Matrícula vira o primeiro módulo, Ranking nasce módulo e preserva a fronteira para eventual extração futura. |
+| Consequências positivas | Melhor separação de responsabilidades; menor acoplamento entre capacidades; evolução incremental sem reescrita; custo operacional igual ao atual e muito menor que o de microsserviços. |
+| Trade-offs | Deploy ainda conjunto; processo e banco compartilhados; Ranking ainda não possui escala independente; durante a transição convivem módulos e camadas. |
+| Gatilho de revisão | Reavaliar a extração do Ranking quando métricas mostrarem gargalo, necessidade de escala própria ou de deploy independente. |
+
+## 8. C4 - visão de Container
+
+No Desafio 1 a decisão é macro. O C4 Container mostra que o Core continua sendo **um único
+container** e explicita que sua organização interna passa a ser modular. O detalhamento dos
+componentes internos fica para o C4 Component do Desafio 2.
+
+```mermaid
+flowchart TB
+    aluno["Aluno<br/>[Pessoa]"]
+    admin["Administrador do banco<br/>[Pessoa]"]
+
+    subgraph plataforma["Plataforma de Gamificação"]
+        spa["Front-end Web<br/>[Vue.js 3, servido pelo Core]<br/>Cursos, matrículas, créditos e ranking"]
+        core["Core Gamificação<br/>[Java / Spring Boot]<br/>MONÓLITO MODULAR<br/>matricula · ranking · usuario · curso · domain"]
+        db[("Banco Relacional<br/>[PostgreSQL 16]")]
+        pgadmin["pgAdmin<br/>[Container de administração]"]
+    end
+
+    aluno -- "usa (HTTPS)" --> spa
+    spa -- "chama (REST/JSON)" --> core
+    core -- "lê e grava (JPA)" --> db
+    admin -- "administra" --> pgadmin
+    pgadmin -- "SQL" --> db
+```
+
+Impacto da decisão: nenhum container novo foi criado. A mudança é interna ao Core e será detalhada
+no C4 Component do Desafio 2.
+
+## 9. Mini-lab - evidência arquitetural
+
+A evidência não é apenas um print da aplicação funcionando. O objetivo é testar a hipótese de que a
+modularização torna as fronteiras e dependências mais explícitas **sem alterar o comportamento**.
+
+### 9.1 Estrutura antes (tag `ac1-final`)
 
 ```
-src/main/java/org/example/grupo_7_praticaatdd
-├── domain          regras de negócio nascidas do TDD (POJOs, sem framework)
-├── entity          entidades JPA que guardam o estado no banco
-├── repository      Spring Data JPA
-├── service         orquestra repositórios e delega as regras ao domain
-├── dto             contratos de entrada e saída da API
-├── controller      endpoints REST e tratamento de erro
-└── config          configuração do OpenAPI/Swagger
+org/example/grupo_7_praticaatdd/
+├── controller/  CursoRestController  MatriculaRestController  UsuarioRestController  ApiExceptionHandler
+├── service/     CursoService  MatriculaService  UsuarioService
+├── repository/  CursoRepository  MatriculaRepository  UsuarioRepository
+├── entity/      CursoEntity  MatriculaEntity  UsuarioEntity
+├── dto/         CursoRequestDTO  CursoResponseDTO  MatriculaRequestDTO  MatriculaResponseDTO
+│                NotaRequestDTO  UsuarioRequestDTO  UsuarioResponseDTO
+├── domain/      Assinatura  Curso  Matricula  StatusMatricula  Usuario
+└── config/      OpenApiConfig
 ```
 
-O `domain` foi mantido puro de propósito: são as classes cobertas pelos testes do TDD. O
-`MatriculaService` reconstrói os objetos de domínio para aplicar a regra e depois grava o
-resultado na entidade JPA, de modo que a regra validada pelos testes é a mesma que roda na API.
+### 9.2 Dependências antes (medidas com `jdeps`)
 
-### Endpoints
+Coletado sobre as classes compiladas da tag `ac1-final`. Arquivo completo:
+[docs/evidencias/desafio-1/antes-dependencias.txt](docs/evidencias/desafio-1/antes-dependencias.txt).
 
-| Método | Rota | Descrição |
+| De → Para | Pares classe → classe |
+|---|---|
+| controller → dto | 7 |
+| controller → service | 3 |
+| service → domain | 5 |
+| service → entity | 5 |
+| service → repository | 5 |
+| service → dto | 3 |
+| repository → entity | 3 |
+| entity → domain | 1 |
+
+O que os números mostram sobre a capacidade **Matrícula**:
+
+- Ela está espalhada em **9 classes distribuídas em 6 pacotes** (`controller`, `dto`, `service`,
+  `entity`, `repository`, `domain`).
+- O `MatriculaService` depende diretamente de **3 repositórios e 3 entidades**, incluindo os de
+  Usuário e Curso. Nada na estrutura impede que qualquer classe acesse a persistência de outra
+  capacidade.
+
+### 9.3 Estrutura depois (alvo do mini-lab)
+
+```
+org/example/grupo_7_praticaatdd/
+├── matricula/
+│   ├── api/            MatriculaRestController  MatriculaRequestDTO  MatriculaResponseDTO  NotaRequestDTO
+│   ├── application/    MatriculaService
+│   └── internal/       MatriculaEntity  MatriculaRepository
+├── ranking/
+│   ├── api/            RankingRestController  RankingResponseDTO
+│   ├── application/    RankingService
+│   └── internal/       RankingRepository
+├── domain/             núcleo da AC1, compartilhado e coberto por TDD
+└── controller/ service/ repository/ entity/ dto/   usuario e curso, ainda em camadas
+```
+
+Regras de fronteira que serão verificadas por testes ArchUnit:
+
+- nenhuma classe fora de `matricula` acessa `matricula.internal`;
+- nenhuma classe fora de `ranking` acessa `ranking.internal`;
+- o `domain` não depende de Spring nem de JPA.
+
+### 9.4 O que comparar
+
+| Evidência | Antes | Depois / resultado esperado |
 |---|---|---|
-| POST | `/api/usuarios` | Criar usuário |
-| GET | `/api/usuarios` | Listar usuários com créditos e cursos concluídos |
-| POST | `/api/cursos` | Criar curso |
-| GET | `/api/cursos` | Listar cursos |
-| POST | `/api/matriculas` | Matricular usuário em um curso do plano |
-| POST | `/api/matriculas/bonus` | Desbloquear curso bônus consumindo um crédito (cenários 5 e 6) |
-| PUT | `/api/matriculas/{id}/concluir` | Concluir matrícula com a nota final (cenários 1 e 2) |
-| PUT | `/api/matriculas/{id}/nota-parcial` | Registrar nota parcial sem concluir (cenário 4) |
-| GET | `/api/matriculas/usuario/{usuarioId}` | Listar matrículas de um usuário |
+| Organização | Por camada técnica: Matrícula em 6 pacotes. | Por capacidade de negócio: Matrícula e Ranking em um pacote cada. |
+| Dependências | Classes de capacidades distintas se misturam nas mesmas camadas; acesso livre à persistência de outras capacidades. | Dependências entre módulos ficam explícitas, ocorrem por contratos (`api`/`application`) e são verificadas por ArchUnit. |
+| Testes | Só o `domain` tem testes; a API não tem rede de segurança. | Testes MockMvc da matrícula escritos antes da reorganização passam iguais depois; testes concentrados por módulo. |
+| Evolução futura | Extrair o Ranking exigiria reorganizar várias camadas. | Ranking possui fronteira clara para futura extração, se necessária. |
 
-## Como executar
-
-Pré-requisitos: JDK 17 ou superior, e Docker para o perfil PostgreSQL.
-
-### Rodando os testes
+### 9.5 Como reproduzir
 
 ```bash
+# compilar e medir as dependências
+./mvnw -q -DskipTests compile
+jdeps -verbose:class -filter:none target/classes
+
+# rodar todos os testes (domínio, API e regras de arquitetura)
 ./mvnw test
 ```
 
-O relatório de cobertura é gerado em `target/site/jacoco/index.html`.
+## 10. Evidências a versionar
 
-### Perfil H2 (banco em memória)
+| Evidência | Situação |
+|---|---|
+| README arquitetural com RF → RNF → ASR → RPC → alternativas → decisão | Feito (este documento) |
+| ADR-001 com decisão e trade-offs | Feito (seção 7) |
+| C4 Container atualizado | Feito (seção 8) |
+| Estrutura e dependências **antes** | Feito: [antes-dependencias.txt](docs/evidencias/desafio-1/antes-dependencias.txt) |
+| Testes MockMvc da matrícula antes da reorganização | Pendente |
+| Código da modularização da Matrícula e do módulo Ranking (RF01) | Pendente |
+| Estrutura e dependências **depois** + regras ArchUnit | Pendente |
+| Testes executados após a refatoração, demonstrando preservação do comportamento | Pendente |
+
+## 11. Conclusão
+
+A equipe decidiu evoluir o Core para Monólito Modular, de forma incremental. A medição do "antes"
+confirma o problema que motiva a decisão: a capacidade Matrícula está espalhada em seis pacotes
+técnicos e o seu service acessa diretamente a persistência de outras capacidades, sem nenhuma
+fronteira que impeça esse acoplamento.
+
+A extração do Ranking para um serviço independente não foi adotada neste momento porque o cenário
+informa crescimento, mas ainda não fornece evidência de gargalo nem necessidade comprovada de deploy
+independente. Essa decisão deverá ser revisitada quando métricas de carga, latência, throughput ou
+frequência de deploy justificarem o custo adicional de distribuição. Essas métricas passam a ser
+coletadas no Desafio 6.
+
+O mini-lab vai comprovar se a reorganização reduz o acoplamento estrutural sem alterar o
+comportamento funcional; esta conclusão será completada com o resultado do "depois".
+
+## 12. Rastreabilidade final
+
+| Elemento | Resposta resumida |
+|---|---|
+| RF | RF01 Ranking (novo) e RF02 Conquistas (créditos da AC1, Premium e moedas a evoluir). |
+| RNF | Manutenibilidade, escalabilidade, testabilidade, desempenho e complexidade operacional foram analisados. |
+| ASR | Manutenibilidade, escalabilidade e complexidade operacional. |
+| RPC | Spring Boot, 6 desenvolvedores, PostgreSQL, legado da AC1 com `domain` coberto por TDD, um único Docker Compose. |
+| Alternativas | Monólito em Camadas × Monólito Modular × serviços independentes. |
+| ADR | ADR-001: adotar Monólito Modular de forma incremental. |
+| C4 | Core permanece um container; a organização interna passa a ser modular. |
+| Evidência | Medição de dependências antes/depois com `jdeps`, regras ArchUnit e testes preservando o comportamento. |
+
+**Regra de leitura:** RF/RNF → ASR + RPC → alternativas → ADR → C4 → evidência.
+
+---
+
+# Matriz cumulativa de ASRs
+
+| ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
+|---|---|---|---|---|---|---|---|
+| Manutenibilidade | ✔ | | | | | | Dependências antes/depois (`jdeps`) e regras ArchUnit |
+| Escalabilidade | ✔ | | | | | | Fronteira do Ranking; latência do ranking a medir no D6 |
+| Complexidade operacional | ✔ | | | | | | Continua 1 container de aplicação, 1 banco e 1 pipeline |
+
+# Desafios seguintes
+
+- Desafio 2 - Organização interna do Core: pendente
+- Desafio 3 - Serviço Python e IA: pendente
+- Desafio 4 - Comunicação e eventos: pendente
+- Desafio 5 - IoT e MQTT: pendente
+- Desafio 6 - CI/CD e observabilidade: pendente
+
+# Como executar
+
+Pré-requisitos: JDK 17 ou superior e Docker para o perfil PostgreSQL.
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=h2
+./mvnw test                                            # testes + relatório JaCoCo em target/site/jacoco
+./mvnw spring-boot:run -Dspring-boot.run.profiles=h2   # banco em memória
+./mvnw package -DskipTests && docker compose up -d --build   # app + PostgreSQL + pgAdmin
 ```
-
-- Aplicação e front-end: http://localhost:8080
-- Swagger: http://localhost:8080/swagger-ui.html
-- Console H2: http://localhost:8080/h2-console (JDBC URL `jdbc:h2:mem:gamificacaodb`, usuário `sa`, sem senha)
-
-### Perfil PostgreSQL via Docker
-
-```bash
-docker compose up -d --build
-```
-
-Sobem três containers: a aplicação, o PostgreSQL e o pgAdmin.
 
 - Aplicação e front-end: http://localhost:8080
 - Swagger: http://localhost:8080/swagger-ui.html
 - pgAdmin: http://localhost:5050 (`admin@admin.com` / `admin`)
-- PostgreSQL: `localhost:5432`, banco `gamificacao_db`, usuário e senha `postgres`
 
-Para derrubar tudo:
-
-```bash
-docker compose down -v
-```
-
-### Dependências do Spring Boot usadas
-
-Spring Web (MVC), Spring Data JPA, Bean Validation, H2, PostgreSQL e springdoc-openapi (Swagger).
-Cobertura de testes com JaCoCo.
-
-## Front-end
-
-Front-end em Vue.js 3 servido pela própria aplicação em `src/main/resources/static`. Permite criar
-usuários e cursos, matricular, concluir com nota, registrar nota parcial, desbloquear curso bônus
-e acompanhar os créditos do aluno.
-
-## Evidências de execução
-
-| Evidência | Print |
-|---|---|
-| Front-end em Vue.js consumindo a API | [printsEvidencias/01-front-vue.png](printsEvidencias/01-front-vue.png) |
-| Swagger com os endpoints expostos | [printsEvidencias/02-swagger.png](printsEvidencias/02-swagger.png) |
-| Banco H2 rodando, com os dados da regra de negócio | [printsEvidencias/03-h2-console.png](printsEvidencias/03-h2-console.png) |
-| PostgreSQL rodando em container | [printsEvidencias/04-postgres-docker.png](printsEvidencias/04-postgres-docker.png) |
-| pgAdmin administrando o banco via container | [printsEvidencias/05-pgadmin.png](printsEvidencias/05-pgadmin.png) |
-| Aplicação rodando via Docker Compose | [printsEvidencias/06-docker-compose.png](printsEvidencias/06-docker-compose.png) |
-| Cobertura de 100% no domínio ao final do BLUE | [printsEvidencias/07-jacoco-blue-100.png](printsEvidencias/07-jacoco-blue-100.png) |
-
-## Planilha
-
-A planilha com as User Stories, os cenários BDD e o primeiro passo do TDD está versionada em
-[Tabela_US_BDD_TDD.xlsx](Tabela_US_BDD_TDD.xlsx).
+Detalhes de execução, endpoints e evidências da AC1: [docs/ac1/README.md](docs/ac1/README.md).
