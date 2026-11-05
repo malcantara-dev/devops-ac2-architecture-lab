@@ -541,6 +541,68 @@ deploy de um deles divergir do outro (por exemplo, o RAG passar a usar um LLM ex
 | Trade-offs | Mais um container, um contrato HTTP a manter e latência de rede; recomendação de fallback é menos personalizada. |
 | Gatilho de revisão | Separar ML e RAG quando a carga ou o deploy divergirem; revisar o timeout com as métricas do D6. |
 
+## 8. C4 - visão de Container com a fronteira da IA
+
+```mermaid
+flowchart TB
+    aluno["Aluno<br/>[Pessoa]"]
+    subgraph plataforma["Plataforma de Gamificação"]
+        spa["Front-end Web<br/>[Vue.js 3]"]
+        core["Core Gamificação<br/>[Java / Spring Boot]<br/>módulo recomendacao: porta + adapter HTTP"]
+        ia["ia-service<br/>[Python / FastAPI]<br/>RF03 recomendação · RF04 assistente RAG"]
+        db[("PostgreSQL")]
+    end
+    aluno -- "HTTPS" --> spa
+    spa -- "REST/JSON" --> core
+    core -- "REST/JSON<br/>timeout 2 s · circuit breaker" --> ia
+    core -- "JPA" --> db
+    core -. "IA fora do ar: fallback local" .-> core
+```
+
+O `ia-service` é um container novo, com deploy e escala próprios. O Core continua dono dos dados
+(cursos e matrículas) e manda para a IA só o histórico e o catálogo necessários.
+
+## 9. Mini-lab - evidência arquitetural
+
+**Hipótese:** com o serviço separado e o fallback no Core, derrubar a IA não afeta o fluxo
+essencial; o aluno recebe uma recomendação degradada, não um erro.
+
+| Evidência | Resultado |
+|---|---|
+| ia-service no ar | Recomendação e resposta do assistente com fonte: [falha-simulada.md](docs/evidencias/desafio-3/falha-simulada.md) (seção 1). |
+| ia-service derrubado | Conexão recusada na porta 8000 (seção 2 do mesmo arquivo). |
+| Core com IA fora do ar | Timeout, erro 500 e circuito aberto viram `IaIndisponivelException`; o caso de uso responde `origem = FALLBACK` (6 testes verdes, seção 3). |
+| Testes do serviço Python | 5 testes pytest: [pytest.md](docs/evidencias/desafio-3/pytest.md). |
+
+## 10. Evidências a versionar
+
+| Evidência | Situação |
+|---|---|
+| `ia-service` (FastAPI) com Dockerfile e testes | Feito: [ia-service/](ia-service/) |
+| Spring Boot consumindo o FastAPI | Feito: módulo `recomendacao` (`GET /api/recomendacoes/usuario/{id}`) |
+| Serviço Python interrompido e falha tratada | Feito: [falha-simulada.md](docs/evidencias/desafio-3/falha-simulada.md) |
+| C4 Container com a fronteira da IA | Feito (seção 8) |
+
+## 11. Conclusão
+
+A fronteira da IA ficou fora do Core pelos ASRs, não pela linguagem. O mini-lab mostrou que, com a
+IA fora do ar, o Core responde em até 2 s com a recomendação de fallback e, depois de 3 falhas
+seguidas, para de tentar por 30 s e responde na hora. O custo aceito foi um container a mais e um
+contrato HTTP. As métricas de fallback passam a ser acompanhadas no Desafio 6.
+
+## 12. Rastreabilidade final
+
+| Elemento | Resposta resumida |
+|---|---|
+| RF | RF03 Recomendação e RF04 Assistente. |
+| RNF | Deploy independente, escalabilidade, tolerância a falhas, interoperabilidade, desempenho e manutenibilidade. |
+| ASR | Deploy independente, tolerância a falhas e escalabilidade. |
+| RPC | Core Java; ML/RAG em Python; IA não bloqueia o fluxo essencial. |
+| Alternativas | IA no Core × módulo acoplado × serviço Python independente. |
+| ADR | ADR-003: `ia-service` independente com fallback no Core. |
+| C4 | Container com `ia-service` e protocolo REST/JSON com timeout e circuit breaker. |
+| Evidência | Serviço no ar e derrubado, testes de timeout/erro/circuito e fallback no caso de uso. |
+
 ---
 
 # Matriz cumulativa de ASRs
@@ -548,15 +610,17 @@ deploy de um deles divergir do outro (por exemplo, o RAG passar a usar um LLM ex
 | ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
 |---|---|---|---|---|---|---|---|
 | Manutenibilidade | ✔ | ✔ | | | | | Dependências antes/depois (`jdeps`) e regras ArchUnit |
-| Escalabilidade | ✔ | | | | | | Fronteira do Ranking; latência do ranking a medir no D6 |
+| Escalabilidade | ✔ | | ✔ | | | | Fronteira do Ranking; latência do ranking a medir no D6 |
 | Complexidade operacional | ✔ | | | | | | Continua 1 container de aplicação, 1 banco e 1 pipeline |
 | Modificabilidade | | ✔ | | | | | Regras só no `domain`; ArchUnit proíbe JPA no caso de uso |
 | Testabilidade | | ✔ | | | | | Mesmo contrato verde com adapter em memória e JPA |
+| Deploy independente | | | ✔ | | | | `ia-service` com container e pipeline próprios |
+| Tolerância a falhas | | | ✔ | | | | Fallback com IA fora do ar; métrica de fallbacks no D6 |
 
 # Desafios seguintes
 
 - Desafio 2 - Organização interna do Core: concluído
-- Desafio 3 - Serviço Python e IA: em andamento (decisão registrada)
+- Desafio 3 - Serviço Python e IA: concluído
 - Desafio 4 - Comunicação e eventos: pendente
 - Desafio 5 - IoT e MQTT: pendente
 - Desafio 6 - CI/CD e observabilidade: pendente
