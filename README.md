@@ -747,6 +747,79 @@ evento fica só no log; o outbox transacional é o próximo passo se isso virar 
 
 ---
 
+# Desafio 5 - IoT e MQTT
+
+**Papel: Tech Lead.** Integrar dispositivos com recursos limitados e conectividade intermitente
+sem acoplar o Core a cada dispositivo.
+
+## 1. Leitura do cenário
+
+Laboratórios passam a produzir eventos de presença, início e conclusão de atividade por
+dispositivos simples (catracas, leitores) com conexão instável. Esses eventos precisam entrar na
+plataforma sem que o Core conheça cada dispositivo e sem perder ou duplicar eventos relevantes.
+
+## 2. RFs afetados
+
+| ID | Requisito funcional | Impacto no desafio |
+|---|---|---|
+| RF06 | Receber eventos IoT e encaminhá-los à plataforma | Novo endpoint idempotente no Core, alimentado por um gateway. |
+
+## 3. RNFs e seleção dos ASRs
+
+| RNF | FURPS+ | ASR? | Justificativa arquitetural |
+|---|---|---|---|
+| Tolerância à conectividade intermitente | Reliability | **SIM** | Dispositivo e gateway caem; o protocolo precisa guardar e reenviar. |
+| Eficiência de comunicação | Performance | **SIM** | Dispositivos fracos: cabeçalho mínimo e conexão persistente em vez de HTTP a cada evento. |
+| Interoperabilidade | Supportability | **SIM** | Protocolo padrão de IoT, suportado por qualquer firmware. |
+| Disponibilidade | Reliability | NÃO como driver separado | Coberta pela tolerância à conectividade. |
+| Escalabilidade | Performance | NÃO neste momento | Poucos laboratórios; um broker atende. |
+| Segurança de integração | + | NÃO neste mini-lab | Registrada como pendência: TLS e usuário por dispositivo antes de produção. |
+
+## 4. RPCs - restrições e premissas
+
+| RPC | Consequência para a decisão |
+|---|---|
+| Dispositivos com baixo poder computacional | Protocolo leve (MQTT), sem JSON pesado nem TLS por requisição. |
+| Conectividade intermitente | QoS 1 e sessão persistente; idempotência no destino. |
+| Protocolo e broker adicionam componentes operacionais | Um broker só (Mosquitto); nada de segundo broker sem ASR. |
+
+## 5. Alternativas e trade-offs
+
+| Alternativa | Benefícios | Custos / riscos | Avaliação |
+|---|---|---|---|
+| A - REST direto do dispositivo ao Core | Nenhum componente novo. | Dispositivo precisa de HTTP e retry; Core fica acoplado a cada dispositivo; evento perdido se o Core estiver fora. | Rejeitada. |
+| B - MQTT + gateway consumidor | Protocolo leve; broker guarda mensagens QoS 1; o Core só conhece o gateway. | Broker e gateway a operar; QoS 1 gera duplicatas. | **Escolhida.** |
+| C - MQTT + ponte para o RabbitMQ interno | Eventos IoT entrariam na mesma mensageria do D4. | Segundo broker no caminho sem ASR que justifique. | Adiada. |
+
+## 6. Decisão do Tech Lead
+
+**DECISÃO: MQTT (Mosquitto) com um gateway entre os dispositivos e o Core.**
+
+- **REST é suficiente?** Não: não guarda eventos quando a conexão cai e é pesado para o dispositivo.
+- **O que o MQTT resolve?** Publicação leve, QoS 1 e sessão persistente: o broker segura as
+  mensagens enquanto o gateway está fora.
+- **Precisa de outro broker depois do MQTT?** Não agora. Só se surgir ASR como vários consumidores
+  internos dos eventos IoT ou replay.
+- **Como evitar perda e duplicidade?** Perda: QoS 1 + sessão persistente + retry do gateway.
+  Duplicidade: `eventId` único gerado no dispositivo e restrição `unique` no Core.
+
+## 7. ADR-005 - Integração IoT
+
+| Campo | Registro |
+|---|---|
+| Título | ADR-005 - Eventos IoT via MQTT com gateway e idempotência no Core |
+| Status | Aceito |
+| Contexto | Dispositivos fracos e com conexão instável produzem eventos de presença e atividade. |
+| ASRs | Tolerância à conectividade intermitente; Eficiência de comunicação; Interoperabilidade. |
+| RPCs | Baixo poder computacional; conexão intermitente; custo operacional de broker. |
+| Alternativas | A) REST direto; B) MQTT + gateway; C) MQTT + ponte para RabbitMQ. |
+| Decisão | Mosquitto (QoS 1, persistência), `iot/gateway.py` com sessão persistente e retry, e `POST /api/eventos-iot` idempotente pelo `eventId`. |
+| Consequências positivas | Core desacoplado dos dispositivos; nenhum evento perdido com o gateway fora; duplicatas descartadas. |
+| Trade-offs | Broker e gateway a operar; segurança (TLS/ACL) ainda pendente; consistência eventual dos eventos. |
+| Gatilho de revisão | Ponte para o RabbitMQ quando houver mais de um consumidor interno dos eventos IoT; TLS e ACL antes de produção. |
+
+---
+
 # Matriz cumulativa de ASRs
 
 | ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
@@ -766,7 +839,7 @@ evento fica só no log; o outbox transacional é o próximo passo se isso virar 
 - Desafio 2 - Organização interna do Core: concluído
 - Desafio 3 - Serviço Python e IA: concluído
 - Desafio 4 - Comunicação e eventos: concluído
-- Desafio 5 - IoT e MQTT: pendente
+- Desafio 5 - IoT e MQTT: em andamento (decisão registrada)
 - Desafio 6 - CI/CD e observabilidade: pendente
 
 # Como executar
