@@ -7,6 +7,8 @@ public class Assinatura {
 
     private int creditosCursos = 0;
     private int cursosConcluidosComSucesso = 0;
+    private PlanoAssinatura plano = PlanoAssinatura.BASICO;
+    private int moedas = 0;
 
     public int getCreditosCursos() {
         return creditosCursos;
@@ -14,6 +16,16 @@ public class Assinatura {
 
     public int getCursosConcluidosComSucesso() {
         return cursosConcluidosComSucesso;
+    }
+
+    // TODO Rafael - cenarios 7 e 8
+    public PlanoAssinatura getPlano() {
+        return plano;
+    }
+
+    // TODO Rafael - cenarios 7 e 8
+    public int getMoedas() {
+        return moedas;
     }
 
     public void adicionarCreditos(int quantidade) {
