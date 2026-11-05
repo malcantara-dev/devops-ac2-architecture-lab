@@ -1,5 +1,6 @@
 package org.example.grupo_7_praticaatdd.iot.application;
 
+import io.micrometer.core.instrument.Metrics;
 import org.example.grupo_7_praticaatdd.iot.api.EventoIotDTO;
 import org.example.grupo_7_praticaatdd.iot.internal.EventoIotEntity;
 import org.example.grupo_7_praticaatdd.iot.internal.EventoIotRepository;
@@ -18,6 +19,13 @@ public class EventoIotService {
 
     // true = evento novo; false = duplicata ignorada.
     public boolean registrar(EventoIotDTO e) {
+        boolean novo = gravar(e);
+        // Metrica do D5: iot_eventos_total{status="duplicado"} mostra as reentregas do QoS 1
+        Metrics.counter("iot.eventos", "status", novo ? "registrado" : "duplicado").increment();
+        return novo;
+    }
+
+    private boolean gravar(EventoIotDTO e) {
         if (repositorio.existsByEventId(e.eventId())) {
             return false;
         }
