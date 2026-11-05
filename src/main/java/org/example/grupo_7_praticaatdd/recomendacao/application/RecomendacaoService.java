@@ -1,5 +1,6 @@
 package org.example.grupo_7_praticaatdd.recomendacao.application;
 
+import io.micrometer.core.instrument.Metrics;
 import org.example.grupo_7_praticaatdd.dto.CursoResponseDTO;
 import org.example.grupo_7_praticaatdd.matricula.api.MatriculaResponseDTO;
 import org.example.grupo_7_praticaatdd.matricula.application.MatriculaService;
@@ -39,8 +40,12 @@ public class RecomendacaoService {
         List<String> catalogo = cursos.listar().stream().map(CursoResponseDTO::getTitulo).toList();
 
         try {
-            return new RecomendacaoDTO(usuarioId, "IA", motor.recomendar(usuarioId, concluidos, catalogo), null);
+            RecomendacaoDTO resposta = new RecomendacaoDTO(usuarioId, "IA", motor.recomendar(usuarioId, concluidos, catalogo), null);
+            Metrics.counter("recomendacao.resultado", "origem", "IA").increment();
+            return resposta;
         } catch (RuntimeException falha) {
+            // Metrica do ASR de tolerancia a falhas do D3: recomendacao_resultado_total{origem="FALLBACK"}
+            Metrics.counter("recomendacao.resultado", "origem", "FALLBACK").increment();
             log.warn("ia-service indisponivel, usando fallback: {}", falha.getMessage());
             return new RecomendacaoDTO(usuarioId, "FALLBACK", fallback(concluidos, catalogo),
                     "ia-service indisponivel: " + falha.getMessage());

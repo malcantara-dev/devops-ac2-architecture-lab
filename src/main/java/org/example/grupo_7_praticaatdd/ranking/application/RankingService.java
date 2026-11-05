@@ -1,5 +1,6 @@
 package org.example.grupo_7_praticaatdd.ranking.application;
 
+import io.micrometer.core.instrument.Metrics;
 import org.example.grupo_7_praticaatdd.domain.PoliticaDePontuacao;
 import org.example.grupo_7_praticaatdd.ranking.api.RankingItemDTO;
 import org.example.grupo_7_praticaatdd.ranking.internal.AlunoPontuado;
@@ -22,8 +23,13 @@ public class RankingService {
         this.consulta = consulta;
     }
 
+    // Metrica do ASR de escalabilidade do D1: latencia do ranking (ranking_consulta_seconds).
     @Transactional(readOnly = true)
     public List<RankingItemDTO> listar() {
+        return Metrics.timer("ranking.consulta").record(this::classificar);
+    }
+
+    private List<RankingItemDTO> classificar() {
         List<AlunoPontuado> alunos = new ArrayList<>(consulta.buscarAlunos());
         alunos.sort(Comparator.comparingInt(this::pontuacao).reversed()
                 .thenComparing(AlunoPontuado::nome));

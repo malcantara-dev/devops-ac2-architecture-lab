@@ -1,5 +1,6 @@
 package org.example.grupo_7_praticaatdd.notificacao.application;
 
+import io.micrometer.core.instrument.Metrics;
 import org.example.grupo_7_praticaatdd.notificacao.api.CursoConcluidoEvento;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,10 @@ public class NotificacaoAssincrona {
     public void aoConcluirCurso(CursoConcluidoEvento evento) {
         try {
             publicador.publicar(evento);
+            Metrics.counter("notificacao.eventos", "resultado", "publicado").increment();
         } catch (RuntimeException falha) {
+            // Metrica do D4: eventos que nao chegaram ao broker
+            Metrics.counter("notificacao.eventos", "resultado", "falha").increment();
             log.warn("Broker indisponivel; conclusao ja gravada, notificacao da matricula {} pendente: {}",
                     evento.matriculaId(), falha.getMessage());
         }
