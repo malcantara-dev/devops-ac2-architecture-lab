@@ -1049,13 +1049,19 @@ ADR-003 prometia. Fica pendente instrumentar o próprio ia-service e transformar
 | Observabilidade | | | | | | ✔ | Dashboard com um painel por ASR |
 | Confiabilidade | | | | | | ✔ | Gate de testes, ArchUnit e cobertura no Jenkins; zero 5xx com IA fora |
 
-# Desafios seguintes
+# Síntese para a PoC da Avaliação Final
 
-- Desafio 2 - Organização interna do Core: concluído
-- Desafio 3 - Serviço Python e IA: concluído
-- Desafio 4 - Comunicação e eventos: concluído
-- Desafio 5 - IoT e MQTT: concluído
-- Desafio 6 - CI/CD e observabilidade: concluído
+| Decisão | ADR | Vai para a PoC? | Por quê |
+|---|---|---|---|
+| Core como monólito modular, com fronteiras verificadas por ArchUnit | ADR-001 | **Sim** | Base de tudo; custo operacional baixo e Ranking pronto para extração se a métrica pedir. |
+| Ports & Adapters na gamificação | ADR-002 | **Sim** | Regras que mais mudam ficam testáveis sem banco; padrão a estender a outros módulos. |
+| IA como serviço Python com fallback | ADR-003 | **Sim** | Demonstra deploy independente e degradação controlada. |
+| Conclusão síncrona, notificação assíncrona (RabbitMQ) | ADR-004 | **Sim**, com outbox como próximo passo | Evita que serviço secundário derrube a operação essencial. |
+| MQTT com gateway e idempotência | ADR-005 | Sim, com TLS/ACL antes de produção | Único caminho robusto para dispositivos instáveis. |
+| Pipeline por componente e painéis por ASR | ADR-006 | **Sim** | Os gatilhos de revisão de todos os ADRs dependem dessas métricas. |
+
+Pendências conhecidas que a PoC precisa resolver: outbox transacional no D4, segurança MQTT no D5,
+métricas próprias do ia-service e migração de `usuario` e `curso` para módulos.
 
 # Como executar
 
