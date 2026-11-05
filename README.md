@@ -468,6 +468,81 @@ estava, respeitando a RPC de não reescrever o produto.
 
 ---
 
+# Desafio 3 - Serviço Python e IA
+
+**Papel: Tech Lead.** Definir a fronteira arquitetural de ML e RAG/LLM sem deixar a IA bloquear as
+operações essenciais do Core.
+
+## 1. Leitura do cenário
+
+A plataforma incorpora recomendação inteligente de cursos e um assistente educacional. Os modelos
+são feitos em Python, têm ciclo de atualização próprio e carga variável, e podem ficar
+indisponíveis. Matricular, concluir e creditar cursos não podem parar por causa da IA.
+
+## 2. RFs afetados
+
+| ID | Requisito funcional | Impacto no desafio |
+|---|---|---|
+| RF03 | Recomendação inteligente | O Core pede recomendações a partir do histórico do aluno e do catálogo. |
+| RF04 | Assistente educacional | Responde dúvidas sobre as regras da plataforma com RAG, citando a fonte. |
+
+## 3. RNFs e seleção dos ASRs
+
+| RNF | FURPS+ | ASR? | Justificativa arquitetural |
+|---|---|---|---|
+| Deploy independente | Supportability | **SIM** | Modelos mudam em outro ritmo e outra linguagem; publicar a IA não pode exigir publicar o Core. |
+| Tolerância a falhas | Reliability | **SIM** | A IA pode cair; o Core precisa de timeout, circuit breaker e fallback. |
+| Escalabilidade | Performance | **SIM** | A carga da IA varia e pode exigir réplicas próprias. |
+| Interoperabilidade | Supportability | NÃO como driver | Resolvida com REST/JSON, contrato simples. |
+| Desempenho | Performance | NÃO neste momento | Limitado pelo timeout de 2 s; sem medição de gargalo. |
+| Manutenibilidade | Supportability | NÃO como driver | Consequência da fronteira, não o motivo dela. |
+
+## 4. RPCs - restrições e premissas
+
+| RPC | Consequência para a decisão |
+|---|---|
+| Core permanece Java/Spring Boot | A IA não entra no processo Java. |
+| ML e RAG usam Python | Precisa de um runtime Python separado. |
+| Indisponibilidade da IA não pode bloquear o fluxo essencial | Chamada com timeout, circuit breaker e fallback; nada do fluxo de matrícula depende da IA. |
+
+## 5. Alternativas e trade-offs
+
+| Alternativa | Benefícios | Custos / riscos | Avaliação |
+|---|---|---|---|
+| A - IA embutida no Core | Sem rede. | Exigiria Java para ML/RAG ou Python dentro da JVM; deploy e falhas acoplados ao Core. | Rejeitada. |
+| B - Módulo acoplado (Python chamado como processo pelo Core) | Sem novo container. | Mesmo ciclo de deploy; falha do processo afeta o Core; não escala separado. | Rejeitada. |
+| C - Serviço Python independente (FastAPI) | Deploy, escala e ciclo próprios; falha isolada. | Rede, contrato HTTP e mais um container a operar. | **Escolhida.** |
+
+**ML e RAG juntos ou separados?** Juntos, por enquanto, no mesmo `ia-service`: os dois são pequenos,
+usam a mesma base de texto e a equipe é pequena. O gatilho para separar é a carga ou o ciclo de
+deploy de um deles divergir do outro (por exemplo, o RAG passar a usar um LLM externo pago).
+
+## 6. Decisão do Tech Lead
+
+**DECISÃO: criar o `ia-service` em Python (FastAPI) como serviço independente.**
+
+- **Python por si só justifica um serviço?** Não. O que justifica são os ASRs: deploy
+  independente, falha isolada e escala própria. Python é uma RPC que reforça a decisão.
+- **Qual comportamento degradado é aceitável?** Recomendação genérica (cursos do catálogo ainda não
+  concluídos) com `origem = FALLBACK`. O assistente fica indisponível, sem afetar o resto.
+
+## 7. ADR-003 - Fronteira da IA
+
+| Campo | Registro |
+|---|---|
+| Título | ADR-003 - IA como serviço Python independente com fallback no Core |
+| Status | Aceito |
+| Contexto | RF03 e RF04 exigem ML e RAG em Python, com ciclo próprio e carga variável; a IA não pode bloquear o Core. |
+| ASRs | Deploy independente; Tolerância a falhas; Escalabilidade. |
+| RPCs | Core Java/Spring Boot; ML/RAG em Python; IA fora do ar não bloqueia o fluxo essencial. |
+| Alternativas | A) IA no Core; B) módulo acoplado; C) serviço Python independente. |
+| Decisão | `ia-service` (FastAPI) com `/recomendacoes` e `/assistente/perguntar`; no Core, a porta `MotorDeRecomendacao` com adapter HTTP (timeout de 2 s e circuit breaker de 3 falhas / 30 s) e fallback no caso de uso. |
+| Consequências positivas | A IA evolui e escala sozinha; a queda dela vira resposta degradada, não erro. |
+| Trade-offs | Mais um container, um contrato HTTP a manter e latência de rede; recomendação de fallback é menos personalizada. |
+| Gatilho de revisão | Separar ML e RAG quando a carga ou o deploy divergirem; revisar o timeout com as métricas do D6. |
+
+---
+
 # Matriz cumulativa de ASRs
 
 | ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
@@ -481,7 +556,7 @@ estava, respeitando a RPC de não reescrever o produto.
 # Desafios seguintes
 
 - Desafio 2 - Organização interna do Core: concluído
-- Desafio 3 - Serviço Python e IA: pendente
+- Desafio 3 - Serviço Python e IA: em andamento (decisão registrada)
 - Desafio 4 - Comunicação e eventos: pendente
 - Desafio 5 - IoT e MQTT: pendente
 - Desafio 6 - CI/CD e observabilidade: pendente
