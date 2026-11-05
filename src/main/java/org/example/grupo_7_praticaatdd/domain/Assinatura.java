@@ -7,6 +7,8 @@ public class Assinatura {
 
     private int creditosCursos = 0;
     private int cursosConcluidosComSucesso = 0;
+    private PlanoAssinatura plano = PlanoAssinatura.BASICO;
+    private int moedas = 0;
 
     public int getCreditosCursos() {
         return creditosCursos;
@@ -16,6 +18,14 @@ public class Assinatura {
         return cursosConcluidosComSucesso;
     }
 
+    public PlanoAssinatura getPlano() {
+        return plano;
+    }
+
+    public int getMoedas() {
+        return moedas;
+    }
+
     public void adicionarCreditos(int quantidade) {
         this.creditosCursos = this.creditosCursos + quantidade;
     }
@@ -23,6 +33,14 @@ public class Assinatura {
     public void registrarConclusaoComSucesso() {
         this.cursosConcluidosComSucesso = this.cursosConcluidosComSucesso + 1;
         adicionarCreditos(CREDITOS_POR_CONCLUSAO);
+        if (PoliticaDeGamificacao.devePromoverParaPremium(this.cursosConcluidosComSucesso, this.plano)) {
+            promoverParaPremium();
+        }
+    }
+
+    private void promoverParaPremium() {
+        this.plano = PlanoAssinatura.PREMIUM;
+        this.moedas = this.moedas + PoliticaDeGamificacao.MOEDAS_NA_PROMOCAO;
     }
 
     public void consumirCredito() {
