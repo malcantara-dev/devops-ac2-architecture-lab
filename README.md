@@ -1079,16 +1079,30 @@ evidência sustenta o raciocínio. Conferência dos seis desafios:
 
 # Como executar
 
-Pré-requisitos: JDK 17 ou superior e Docker para o perfil PostgreSQL.
+Pré-requisitos: JDK 17 ou superior, Docker e (para o simulador IoT e os testes Python) Python 3.11.
 
 ```bash
-./mvnw test                                            # testes + relatório JaCoCo em target/site/jacoco
-./mvnw spring-boot:run -Dspring-boot.run.profiles=h2   # banco em memória
-./mvnw package -DskipTests && docker compose up -d --build   # app + PostgreSQL + pgAdmin
+./mvnw test                                            # testes Java (domínio, API, ArchUnit) + JaCoCo
+./mvnw verify                                          # testes + gate de cobertura do domain (90%)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=h2   # Core sozinho com banco em memória
+./mvnw package -DskipTests && docker compose up -d --build   # tudo: Core, IA, RabbitMQ, Mosquitto, Prometheus, Grafana
 ```
 
-- Aplicação e front-end: http://localhost:8080
-- Swagger: http://localhost:8080/swagger-ui.html
-- pgAdmin: http://localhost:5050 (`admin@admin.com` / `admin`)
+| Serviço | Endereço | Desafio |
+|---|---|---|
+| Core (API, front e Swagger) | http://localhost:8080 · http://localhost:8080/swagger-ui.html | D1, D2 |
+| Ranking | `GET /api/ranking` | D1 |
+| Recomendação (com fallback) | `GET /api/recomendacoes/usuario/{id}` | D3 |
+| ia-service | http://localhost:8000/docs | D3 |
+| RabbitMQ (guest/guest) | http://localhost:15672 | D4 |
+| Mosquitto | `localhost:1883` · `python iot/gateway.py` e `python iot/simulador.py` | D5 |
+| Métricas do Core | http://localhost:8080/actuator/prometheus | D6 |
+| Prometheus | http://localhost:9090 | D6 |
+| Grafana (admin/admin) | http://localhost:3000 → AC2 → "AC2 - Arquitetura (ASRs)" | D6 |
+| Jenkins (admin/admin) | `docker compose -f infra/jenkins/docker-compose.jenkins.yml up -d --build` → http://localhost:8081 | D6 |
+| pgAdmin | http://localhost:5050 (`admin@admin.com` / `admin`) | - |
+
+Evidências de cada desafio: [docs/evidencias/](docs/evidencias/). Testes Python:
+`cd ia-service && pytest`, `cd notificacao-worker && pytest`, `cd iot && pytest`.
 
 Detalhes de execução, endpoints e evidências da AC1: [docs/ac1/README.md](docs/ac1/README.md).
