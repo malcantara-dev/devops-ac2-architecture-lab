@@ -951,6 +951,84 @@ por ASR.**
 | Trade-offs | Mais arquivos de pipeline; Jenkins local precisa de acesso ao Docker; ia-service ainda sem métricas próprias. |
 | Gatilho de revisão | Instrumentar o ia-service e criar alertas quando os painéis ficarem estáveis. |
 
+## 8. C4 - visão de Deployment (final)
+
+```mermaid
+flowchart TB
+    dev["Equipe<br/>git push"] --> gh["GitHub<br/>malcantara-dev/devops-ac2-architecture-lab"]
+    subgraph host["Host Docker do laboratório"]
+        subgraph ci["Jenkins (infra/jenkins)"]
+            jcore["job core<br/>Jenkinsfile"]
+            jia["job ia-service<br/>ia-service/Jenkinsfile"]
+        end
+        subgraph app["docker compose (rede app_net)"]
+            core["Core Spring Boot :8080<br/>matricula · ranking · gamificacao<br/>recomendacao · notificacao · iot"]
+            ia["ia-service FastAPI :8000"]
+            worker["notificacao-worker"]
+            mq[("RabbitMQ :5672")]
+            mqtt[("Mosquitto :1883")]
+            db[("PostgreSQL :5432")]
+            prom["Prometheus :9090"]
+            graf["Grafana :3000"]
+        end
+    end
+    lab["Dispositivos + gateway IoT"] -- MQTT --> mqtt
+    gh --> jcore & jia
+    jcore -- "deploy app" --> core
+    jia -- "deploy ia-service" --> ia
+    core --> db
+    core -- REST --> ia
+    core -- AMQP --> mq --> worker
+    prom -- "scrape /actuator/prometheus" --> core
+    prom -- "scrape :15692" --> mq
+    graf --> prom
+```
+
+Este é também o C4 final do B1: o Core continua um monólito modular (D1, D2) e só a IA (D3), a
+notificação (D4) e a borda IoT (D5) ficam em processos próprios, cada um justificado por ASR.
+
+## 9. Mini-lab - evidência arquitetural
+
+**Hipótese:** com pipelines por componente e métricas ligadas aos ASRs, a equipe consegue barrar um
+deploy ruim e ver uma falha provocada.
+
+| Evidência | Resultado |
+|---|---|
+| Condição provocada | ia-service fora do ar: 6 recomendações com `origem="FALLBACK"` e as 10 chamadas com status 200 no `/actuator/prometheus`. |
+| Duplicidade IoT medida | 3 entregas do mesmo evento: 1 `registrado`, 2 `duplicado`. |
+| Gate de deploy | Cobertura do `domain` em 88% barrou o build ("expected minimum is 0.90"). |
+| Arquivo | [metricas-e-gate.md](docs/evidencias/desafio-6/metricas-e-gate.md) |
+
+## 10. Evidências a versionar
+
+| Evidência | Situação |
+|---|---|
+| Jenkinsfile evoluído | Feito: [Jenkinsfile](Jenkinsfile) e [ia-service/Jenkinsfile](ia-service/Jenkinsfile) |
+| Jenkins com jobs versionados | Feito: [infra/jenkins/](infra/jenkins/) |
+| Métrica instrumentada | Feito: `recomendacao_resultado_total`, `ranking_consulta_seconds`, `iot_eventos_total`, `notificacao_eventos_total` |
+| Prometheus e Grafana provisionados | Feito: [infra/prometheus/](infra/prometheus/) e [infra/grafana/](infra/grafana/) |
+| Condição observável registrada | Feito: [metricas-e-gate.md](docs/evidencias/desafio-6/metricas-e-gate.md) |
+
+## 11. Conclusão
+
+A esteira passou a proteger as decisões dos desafios anteriores: as regras ArchUnit do D1 e do D2
+e a cobertura do domínio barram o deploy. As métricas escolhidas respondem aos ASRs: a falha
+provocada da IA apareceu como fallback sem nenhum erro para o aluno, que é exatamente o que o
+ADR-003 prometia. Fica pendente instrumentar o próprio ia-service e transformar os painéis em alertas.
+
+## 12. Rastreabilidade final
+
+| Elemento | Resposta resumida |
+|---|---|
+| RF | Todos os RFs dos componentes construídos. |
+| RNF | Observabilidade, deploy independente, confiabilidade, testabilidade, recuperabilidade e desempenho. |
+| ASR | Observabilidade, deploy independente e confiabilidade. |
+| RPC | Jenkins; Prometheus/Grafana; tudo versionado. |
+| Alternativas | Pipeline único × pipeline por componente. |
+| ADR | ADR-006: pipelines por componente e métricas ligadas aos ASRs. |
+| C4 | Deployment final com Jenkins, Prometheus e Grafana. |
+| Evidência | Métricas da falha provocada e gate de cobertura barrando o build. |
+
 ---
 
 # Matriz cumulativa de ASRs
@@ -962,12 +1040,14 @@ por ASR.**
 | Complexidade operacional | ✔ | | | | | | Continua 1 container de aplicação, 1 banco e 1 pipeline |
 | Modificabilidade | | ✔ | | | | | Regras só no `domain`; ArchUnit proíbe JPA no caso de uso |
 | Testabilidade | | ✔ | | | | | Mesmo contrato verde com adapter em memória e JPA |
-| Deploy independente | | | ✔ | | | | `ia-service` com container e pipeline próprios |
+| Deploy independente | | | ✔ | | | ✔ | `ia-service` com container e pipeline próprios |
 | Tolerância a falhas | | | ✔ | ✔ | ✔ | | Fallback com IA fora do ar; métrica de fallbacks no D6 |
 | Desacoplamento | | | | ✔ | | | Core não conhece os consumidores do evento |
 | Recuperabilidade | | | | ✔ | | | Fila durável + DLQ; mensagens esperam o worker |
 | Eficiência de comunicação | | | | | ✔ | | MQTT QoS 1 com conexão persistente |
 | Interoperabilidade | | | | | ✔ | | Protocolo padrão de IoT; Core só fala REST com o gateway |
+| Observabilidade | | | | | | ✔ | Dashboard com um painel por ASR |
+| Confiabilidade | | | | | | ✔ | Gate de testes, ArchUnit e cobertura no Jenkins; zero 5xx com IA fora |
 
 # Desafios seguintes
 
@@ -975,7 +1055,7 @@ por ASR.**
 - Desafio 3 - Serviço Python e IA: concluído
 - Desafio 4 - Comunicação e eventos: concluído
 - Desafio 5 - IoT e MQTT: concluído
-- Desafio 6 - CI/CD e observabilidade: em andamento (decisão registrada)
+- Desafio 6 - CI/CD e observabilidade: concluído
 
 # Como executar
 
