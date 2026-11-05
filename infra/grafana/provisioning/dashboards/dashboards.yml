@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: ac2
+    folder: AC2
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards
