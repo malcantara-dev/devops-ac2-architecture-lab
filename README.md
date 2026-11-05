@@ -676,6 +676,75 @@ pode impedir a conclusão do curso.
 | Trade-offs | Notificação eventual; se o **broker** cair, o evento só fica no log (sem outbox por enquanto); mais um container. |
 | Gatilho de revisão | Adotar outbox transacional se a perda de notificações com o broker fora virar problema; reavaliar Kafka se surgir necessidade de replay ou analytics em grande volume. |
 
+## 8. C4 - visão de Container e sequência do fluxo crítico
+
+```mermaid
+flowchart LR
+    aluno["Aluno"] -- "HTTPS" --> core["Core Gamificação<br/>[Spring Boot]"]
+    core -- "JPA (mesma transação)" --> db[("PostgreSQL")]
+    core -- "AMQP: CursoConcluido<br/>depois do commit" --> mq[("RabbitMQ<br/>fila durável + DLQ")]
+    mq -- "AMQP (ack manual)" --> worker["notificacao-worker<br/>[Python]"]
+    core -- "REST" --> ia["ia-service"]
+```
+
+```mermaid
+sequenceDiagram
+    participant A as Aluno
+    participant C as Core (MatriculaService)
+    participant DB as PostgreSQL
+    participant MQ as RabbitMQ
+    participant W as notificacao-worker
+    A->>C: PUT /api/matriculas/{id}/concluir
+    C->>DB: grava conclusão + créditos/Premium (transação)
+    DB-->>C: commit
+    C-->>A: 200 CONCLUIDO
+    C-)MQ: CursoConcluidoEvento (AFTER_COMMIT)
+    Note over MQ,W: worker fora do ar: mensagem espera na fila
+    MQ-)W: entrega quando o worker volta
+    W->>MQ: ack
+```
+
+## 9. Mini-lab - evidência arquitetural
+
+**Hipótese:** com a notificação assíncrona, a falha do consumidor não impede a conclusão; com a
+síncrona, impede.
+
+| Evidência | Resultado |
+|---|---|
+| Modo sync, worker fora do ar | 503 e a matrícula continua EM_ANDAMENTO (rollback). |
+| Modo async, evento | Publicado uma vez, só depois do commit; nada é publicado em nota parcial ou transação que falha (Mockito `verify` / `verifyNoInteractions`). |
+| Modo async, broker fora do ar | 200 e CONCLUIDO; falha só no log. |
+| Arquivo | [consumidor-indisponivel.md](docs/evidencias/desafio-4/consumidor-indisponivel.md) (5 testes verdes e o roteiro com os containers). |
+
+## 10. Evidências a versionar
+
+| Evidência | Situação |
+|---|---|
+| Interação síncrona e assíncrona simples | Feito: modos `sync` e `async` do módulo `notificacao` |
+| Consumidor indisponível e efeito registrado | Feito: [consumidor-indisponivel.md](docs/evidencias/desafio-4/consumidor-indisponivel.md) |
+| Worker consumidor | Feito: [notificacao-worker/](notificacao-worker/) |
+| C4 + sequência | Feito (seção 8) |
+
+## 11. Conclusão
+
+O mini-lab comprovou o risco do sincronismo: no modo sync, o worker fora do ar transformou uma
+conclusão válida em 503 e desfez a gravação. No modo async, a conclusão sempre responde 200 e a
+notificação vira consequência eventual. A limitação aceita é que, com o **broker** fora do ar, o
+evento fica só no log; o outbox transacional é o próximo passo se isso virar problema medido.
+
+## 12. Rastreabilidade final
+
+| Elemento | Resposta resumida |
+|---|---|
+| RF | RF02 Conquistas e RF05 Notificações, com o evento de conclusão. |
+| RNF | Tolerância a falhas, disponibilidade, latência, consistência, desacoplamento e recuperabilidade. |
+| ASR | Tolerância a falhas, desacoplamento e recuperabilidade. |
+| RPC | Essencial conclui com consumidor fora; broker tem custo operacional. |
+| Alternativas | REST síncrono × RabbitMQ × Kafka. |
+| ADR | ADR-004: conclusão síncrona, notificação assíncrona via RabbitMQ. |
+| C4 | Container com broker e worker + sequência do fluxo de conclusão. |
+| Evidência | Sync com worker fora (503 + rollback) × async (200, evento após commit). |
+
 ---
 
 # Matriz cumulativa de ASRs
@@ -688,13 +757,15 @@ pode impedir a conclusão do curso.
 | Modificabilidade | | ✔ | | | | | Regras só no `domain`; ArchUnit proíbe JPA no caso de uso |
 | Testabilidade | | ✔ | | | | | Mesmo contrato verde com adapter em memória e JPA |
 | Deploy independente | | | ✔ | | | | `ia-service` com container e pipeline próprios |
-| Tolerância a falhas | | | ✔ | | | | Fallback com IA fora do ar; métrica de fallbacks no D6 |
+| Tolerância a falhas | | | ✔ | ✔ | | | Fallback com IA fora do ar; métrica de fallbacks no D6 |
+| Desacoplamento | | | | ✔ | | | Core não conhece os consumidores do evento |
+| Recuperabilidade | | | | ✔ | | | Fila durável + DLQ; mensagens esperam o worker |
 
 # Desafios seguintes
 
 - Desafio 2 - Organização interna do Core: concluído
 - Desafio 3 - Serviço Python e IA: concluído
-- Desafio 4 - Comunicação e eventos: em andamento (decisão registrada)
+- Desafio 4 - Comunicação e eventos: concluído
 - Desafio 5 - IoT e MQTT: pendente
 - Desafio 6 - CI/CD e observabilidade: pendente
 
