@@ -1,0 +1,27 @@
+# Jobs versionados: um pipeline por componente (decisao do ADR-006)
+jenkins:
+  systemMessage: "AC2 - B1 Architecture Lab (Grupo 7)"
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: admin
+  authorizationStrategy: loggedInUsersCanDoAnything
+jobs:
+  - script: >
+      ['core': 'Jenkinsfile', 'ia-service': 'ia-service/Jenkinsfile'].each { nome, arquivo ->
+        pipelineJob(nome) {
+          definition {
+            cpsScm {
+              scm {
+                git {
+                  remote { url('https://github.com/malcantara-dev/devops-ac2-architecture-lab.git') }
+                  branch('*/main')
+                }
+              }
+              scriptPath(arquivo)
+            }
+          }
+        }
+      }

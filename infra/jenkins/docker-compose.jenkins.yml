@@ -1,0 +1,15 @@
+# Sobe o Jenkins do laboratorio: docker compose -f infra/jenkins/docker-compose.jenkins.yml up -d --build
+services:
+  jenkins:
+    build: .
+    container_name: gamificacao-jenkins
+    ports:
+      - "8081:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "0"
+
+volumes:
+  jenkins_home:
