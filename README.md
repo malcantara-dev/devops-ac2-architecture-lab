@@ -391,19 +391,96 @@ pela API, mesmo estando correta nos testes de domínio.
 | Trade-offs | Convivem módulos com porta e legado em camadas; o adapter JPA ainda grava na tabela `usuarios` do legado. |
 | Gatilho de revisão | Levar a porta a outros módulos quando eles tiverem regras que mudam com frequência ou precisarem trocar a persistência (ex.: ranking em cache). |
 
+## 8. C4 - visão de Component do Core
+
+A decisão é interna ao Core, então o nível afetado é o Component. As setas mostram o sentido das
+dependências: a porta pertence ao caso de uso e o adapter JPA depende dela.
+
+```mermaid
+flowchart TB
+    subgraph core["Container: Core Gamificação [Spring Boot]"]
+        matApi["matricula.api<br/>[Component: REST]"]
+        matApp["matricula.application<br/>[Component: casos de uso]"]
+        rankApi["ranking.api<br/>[Component: REST]"]
+        rankApp["ranking.application<br/>[Component]"]
+        rankInt["ranking.internal<br/>[Component: consulta]"]
+        subgraph gam["módulo gamificacao - Ports & Adapters"]
+            gamApp["GamificacaoService<br/>[caso de uso]"]
+            porta{{"AssinaturaRepositorio<br/>[porta]"}}
+            jpa["AssinaturaJpaAdapter<br/>[adapter JPA]"]
+        end
+        dom["domain<br/>Assinatura · PoliticaDeGamificacao · PoliticaDePontuacao"]
+    end
+    mem["AssinaturaEmMemoria<br/>[adapter de teste]"]
+    db[("PostgreSQL")]
+
+    matApi --> matApp --> gamApp
+    gamApp --> porta
+    gamApp --> dom
+    jpa -. implementa .-> porta
+    mem -. implementa .-> porta
+    jpa --> db
+    rankApi --> rankApp --> rankInt --> db
+    rankApp --> dom
+```
+
+## 9. Mini-lab - evidência arquitetural
+
+**Hipótese:** com a regra no domínio e a persistência atrás de uma porta, o mesmo caso de uso
+funciona com qualquer adapter e a regra do Premium passa a valer de ponta a ponta.
+
+| Evidência | Resultado |
+|---|---|
+| TDD do RF02 (cenários 7 e 8) | [RED](docs/evidencias/desafio-2/tdd/01-red.md) → [GREEN](docs/evidencias/desafio-2/tdd/02-green.md) → [BLUE](docs/evidencias/desafio-2/tdd/03-blue.md), com 100% de cobertura no `domain` ([JaCoCo](docs/evidencias/desafio-2/tdd/jacoco-domain.md)). |
+| Troca de adapter | Os mesmos 4 testes do contrato passam com o adapter em memória (0,25 s, sem Spring) e com o JPA (21 s, H2): [contrato-dois-adapters.md](docs/evidencias/desafio-2/contrato-dois-adapters.md). |
+| Dependências do caso de uso | `gamificacao.application -> domain` é a única dependência; o JPA só aparece em `gamificacao.internal.jpa`: [depois-pacotes.txt](docs/evidencias/desafio-2/depois-pacotes.txt). |
+| Regra de ponta a ponta | `GamificacaoApiTest`: 12 cursos concluídos pela API resultam em plano `PREMIUM` e 3 moedas. |
+| Proteção | `ModulosArchTest` derruba o build se `gamificacao.application` importar JPA, entidade ou repository. |
+
+## 10. Evidências a versionar
+
+| Evidência | Situação |
+|---|---|
+| Regra de domínio isolada (Premium e pontuação) | Feito: `PoliticaDeGamificacao`, `PoliticaDePontuacao` |
+| Troca de adapter mantendo os testes do domínio | Feito: `AssinaturaRepositorioContrato` com dois adapters |
+| C4 Component | Feito (seção 8) |
+| Regras ArchUnit da porta | Feito: `ModulosArchTest` |
+
+## 11. Conclusão
+
+A dependência que precisava ser invertida era a do caso de uso para a persistência, e a inversão
+custou uma interface e um adapter. Com ela, a regra do Premium, impossível no desenho da AC1, passou
+a funcionar pela API, e o domínio ficou testável em milissegundos. O restante do Core continua como
+estava, respeitando a RPC de não reescrever o produto.
+
+## 12. Rastreabilidade final
+
+| Elemento | Resposta resumida |
+|---|---|
+| RF | RF01 Ranking (pontuação com moedas) e RF02 Conquistas (Premium no 12º curso). |
+| RNF | Modificabilidade, testabilidade, manutenibilidade e facilidade de evolução. |
+| ASR | Modificabilidade, testabilidade e manutenibilidade. |
+| RPC | Spring Boot; regras da AC1 reaproveitadas; sem reescrita. |
+| Alternativas | Estrutura atual × Ports & Adapters na gamificação × Clean no Core inteiro. |
+| ADR | ADR-002: Ports & Adapters na gamificação. |
+| C4 | Component do Core com porta e adapters. |
+| Evidência | TDD com 100% no domínio, contrato verde nos dois adapters, ArchUnit e teste de API do Premium. |
+
 ---
 
 # Matriz cumulativa de ASRs
 
 | ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
 |---|---|---|---|---|---|---|---|
-| Manutenibilidade | ✔ | | | | | | Dependências antes/depois (`jdeps`) e regras ArchUnit |
+| Manutenibilidade | ✔ | ✔ | | | | | Dependências antes/depois (`jdeps`) e regras ArchUnit |
 | Escalabilidade | ✔ | | | | | | Fronteira do Ranking; latência do ranking a medir no D6 |
 | Complexidade operacional | ✔ | | | | | | Continua 1 container de aplicação, 1 banco e 1 pipeline |
+| Modificabilidade | | ✔ | | | | | Regras só no `domain`; ArchUnit proíbe JPA no caso de uso |
+| Testabilidade | | ✔ | | | | | Mesmo contrato verde com adapter em memória e JPA |
 
 # Desafios seguintes
 
-- Desafio 2 - Organização interna do Core: em andamento (decisão registrada)
+- Desafio 2 - Organização interna do Core: concluído
 - Desafio 3 - Serviço Python e IA: pendente
 - Desafio 4 - Comunicação e eventos: pendente
 - Desafio 5 - IoT e MQTT: pendente
