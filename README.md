@@ -316,6 +316,83 @@ repositórios de usuário e curso do legado; eles migram quando forem alterados.
 
 ---
 
+# Desafio 2 - Organização interna do Core
+
+**Papel: Tech Lead.** Proteger o domínio contra dependências técnicas, decidindo qual dependência
+precisa ser invertida e se o custo estrutural é proporcional ao problema.
+
+## 1. Leitura do cenário
+
+As regras de ranking, moedas, badges e recompensas mudam com frequência. O B1 acrescenta uma regra
+nova ao RF02: **ao concluir o 12º curso com aproveitamento, o plano vira Premium e o aluno recebe 3
+moedas**. A equipe precisa evitar que domínio, banco, framework e integrações fiquem acoplados.
+
+Ao tentar implementar a regra, o legado mostrou o problema concreto: o `MatriculaService` da AC1
+remontava o domínio só com os créditos (`new Assinatura()` + `adicionarCreditos`). O domínio nunca
+sabia quantos cursos o aluno já tinha concluído, então a regra do Premium era impossível de aplicar
+pela API, mesmo estando correta nos testes de domínio.
+
+## 2. RFs afetados
+
+| ID | Requisito funcional | Impacto no desafio |
+|---|---|---|
+| RF01 | Ranking | A fórmula de pontuação passa a considerar moedas e deve mudar em um só lugar. |
+| RF02 | Conquistas / gamificação | Premium no 12º curso com 3 moedas; as regras devem ser testáveis sem banco. |
+
+## 3. RNFs e seleção dos ASRs
+
+| RNF | FURPS+ | ASR? | Justificativa arquitetural |
+|---|---|---|---|
+| Modificabilidade | Supportability | **SIM** | A regra muda com frequência; precisa ficar no domínio, isolada de banco e framework. |
+| Testabilidade | Supportability | **SIM** | O caso de uso deve funcionar com qualquer persistência, inclusive em memória. |
+| Manutenibilidade | Supportability | **SIM** | A tradução entre tabela e domínio deve morar em um único adapter. |
+| Facilidade de evolução | Supportability | NÃO como driver separado | É consequência dos três ASRs acima. |
+
+## 4. RPCs - restrições e premissas
+
+| RPC | Consequência para a decisão |
+|---|---|
+| Core continua Spring Boot | Ports & Adapters dentro do mesmo processo, com injeção do Spring. |
+| Regras existentes devem ser reaproveitadas | Os 6 cenários do TDD da AC1 continuam passando sem alteração. |
+| Proibido reescrever o produto para aplicar um padrão | O padrão entra só no módulo de gamificação. |
+
+## 5. Alternativas e trade-offs
+
+| Alternativa | Benefícios | Custos / riscos | Avaliação |
+|---|---|---|---|
+| A - Estrutura atual (service usa JPA direto) | Nenhum código novo. | A regra do Premium não chega ao domínio; testar exige banco. | Rejeitada: não atende o RF02. |
+| B - Ports & Adapters (Hexagonal) no módulo de gamificação | Domínio isolado; mesma regra testada com adapter JPA e em memória; mudança localizada. | Uma interface e um adapter a mais. | **Melhor equilíbrio.** |
+| C - Clean Architecture em todo o Core | Regras de dependência uniformes. | Reescrever controllers, services e entidades de todas as capacidades. | Rejeitada: viola a RPC. |
+
+## 6. Decisão do Tech Lead
+
+**DECISÃO: aplicar Ports & Adapters só no módulo de gamificação, combinado com o domínio do DDD.**
+
+- **Qual dependência precisa ser invertida?** A do caso de uso para a persistência. A porta
+  `AssinaturaRepositorio` pertence ao caso de uso; o adapter JPA depende dela, nunca o contrário.
+- **O custo é proporcional?** Sim: uma interface, um adapter JPA e um adapter em memória para os
+  testes. O restante do Core não muda.
+- **DDD, Hexagonal, Clean e Onion são concorrentes?** Não, são combináveis. Do DDD vem o domínio
+  rico e a linguagem do case (Assinatura, Premium, moedas). Do Hexagonal vêm a porta e os adapters.
+  Clean e Onion levariam as mesmas regras a todas as camadas, o que seria desproporcional agora.
+
+## 7. ADR-002 - Ports & Adapters na gamificação
+
+| Campo | Registro |
+|---|---|
+| Título | ADR-002 - Isolar a gamificação com Ports & Adapters |
+| Status | Aceito |
+| Contexto | Regras de gamificação mudam com frequência; o Premium exige o estado completo da assinatura, que o service da AC1 não levava ao domínio. |
+| ASRs | Modificabilidade; Testabilidade; Manutenibilidade. |
+| RPCs | Spring Boot; regras da AC1 reaproveitadas; proibido reescrever o produto. |
+| Alternativas | A) service com JPA direto; B) Ports & Adapters na gamificação; C) Clean Architecture no Core inteiro. |
+| Decisão | Criar a porta `AssinaturaRepositorio` em `gamificacao.application`, implementada por `AssinaturaJpaAdapter` (`gamificacao.internal.jpa`) e por `AssinaturaEmMemoria` nos testes; regras em `PoliticaDeGamificacao` e `PoliticaDePontuacao` no `domain`. |
+| Consequências positivas | Regra do Premium funciona de ponta a ponta; o mesmo contrato roda com os dois adapters; trocar a persistência não muda o caso de uso. |
+| Trade-offs | Convivem módulos com porta e legado em camadas; o adapter JPA ainda grava na tabela `usuarios` do legado. |
+| Gatilho de revisão | Levar a porta a outros módulos quando eles tiverem regras que mudam com frequência ou precisarem trocar a persistência (ex.: ranking em cache). |
+
+---
+
 # Matriz cumulativa de ASRs
 
 | ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
@@ -326,7 +403,7 @@ repositórios de usuário e curso do legado; eles migram quando forem alterados.
 
 # Desafios seguintes
 
-- Desafio 2 - Organização interna do Core: pendente
+- Desafio 2 - Organização interna do Core: em andamento (decisão registrada)
 - Desafio 3 - Serviço Python e IA: pendente
 - Desafio 4 - Comunicação e eventos: pendente
 - Desafio 5 - IoT e MQTT: pendente
