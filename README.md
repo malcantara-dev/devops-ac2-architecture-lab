@@ -17,14 +17,14 @@ RF → RNF → ASR + RPC → alternativas/trade-offs → ADR → C4 → evidênc
 
 ### Papéis por desafio
 
-| Desafio | Mini-lab (código + evidência) | Decisão + ADR | C4 |
+| Desafio | Mini-lab (código + evidência) | Decisão + ADR | C4 e conclusão |
 |---|---|---|---|
-| D1 - Drivers e evolução do Core | Matheus | Rafael | Henrique |
-| D2 - Organização interna do Core | Rafael | Henrique | Matheus |
-| D3 - Serviço Python e IA | Henrique | Matheus | Rafael |
+| D1 - Drivers e evolução do Core | Rafael | Matheus | Matheus |
+| D2 - Organização interna do Core | Rafael (TDD) e Henrique (portas e adapters) | Henrique | Matheus |
+| D3 - Serviço Python e IA | Henrique | Rafael | Matheus |
 | D4 - Comunicação e eventos | Rafael | Henrique | Matheus |
-| D5 - IoT e MQTT | Henrique | Matheus | Rafael |
-| D6 - CI/CD e observabilidade | Matheus | Rafael | Henrique |
+| D5 - IoT e MQTT | Henrique | Matheus | Matheus |
+| D6 - CI/CD e observabilidade | Rafael (métricas), Matheus (Jenkins do Core) e Henrique (Jenkins da IA) | Matheus | Henrique |
 
 ## Ponto de partida: o legado da AC1
 
@@ -1062,6 +1062,20 @@ ADR-003 prometia. Fica pendente instrumentar o próprio ia-service e transformar
 
 Pendências conhecidas que a PoC precisa resolver: outbox transacional no D4, segurança MQTT no D5,
 métricas próprias do ia-service e migração de `usuario` e `curso` para módulos.
+
+# Rastreabilidade de trás para frente
+
+Regra de ouro do B1: o C4 é explicado pelo ADR, o ADR pelos ASRs e RPCs, os ASRs pelos RF/RNF, e a
+evidência sustenta o raciocínio. Conferência dos seis desafios:
+
+| Desafio | C4 → ADR | ADR → ASR + RPC | ASR → RF/RNF | Evidência |
+|---|---|---|---|---|
+| D1 | Container único e modular ← ADR-001 | Manutenibilidade, escalabilidade, complexidade operacional; Spring Boot, equipe de 6, legado | RF01, RF02 | `jdeps` antes/depois, ArchUnit, mesmos testes verdes |
+| D2 | Component com porta ← ADR-002 | Modificabilidade, testabilidade, manutenibilidade; sem reescrita | RF01, RF02 | TDD 100% no domínio, contrato verde em 2 adapters |
+| D3 | Container `ia-service` ← ADR-003 | Deploy independente, tolerância a falhas, escalabilidade; Python, IA não bloqueia | RF03, RF04 | IA derrubada → FALLBACK, circuito aberto |
+| D4 | Container com RabbitMQ + sequência ← ADR-004 | Tolerância a falhas, desacoplamento, recuperabilidade; essencial conclui | RF02, RF05 | Sync 503 + rollback × async 200 |
+| D5 | Container com Mosquitto e gateway ← ADR-005 | Conectividade intermitente, eficiência, interoperabilidade; dispositivos fracos | RF06 | Idempotência por `eventId`, sessão persistente |
+| D6 | Deployment final ← ADR-006 | Observabilidade, deploy independente, confiabilidade; Jenkins, Prometheus/Grafana | Todos | Métricas da falha provocada e gate de cobertura |
 
 # Como executar
 
