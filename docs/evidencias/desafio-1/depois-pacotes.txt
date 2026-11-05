@@ -1,0 +1,22 @@
+# Dependencias entre pacotes do Core (depois)
+# Gerado por scripts/dependencias.sh com jdeps
+# Leitura: origem -> destino (prefixo org.example.grupo_7_praticaatdd omitido)
+
+controller -> dto
+controller -> service
+matricula.api -> matricula.application
+matricula.application -> domain
+matricula.application -> entity
+matricula.application -> matricula.api
+matricula.application -> matricula.internal.persistence
+matricula.application -> repository
+matricula.internal.persistence -> domain
+matricula.internal.persistence -> entity
+ranking.api -> ranking.application
+ranking.application -> ranking.api
+ranking.application -> ranking.internal
+ranking.internal -> entity
+repository -> entity
+service -> dto
+service -> entity
+service -> repository

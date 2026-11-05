@@ -216,36 +216,45 @@ O que os números mostram sobre a capacidade **Matrícula**:
   Usuário e Curso. Nada na estrutura impede que qualquer classe acesse a persistência de outra
   capacidade.
 
-### 9.3 Estrutura depois (alvo do mini-lab)
+### 9.3 Estrutura depois (resultado do mini-lab)
 
 ```
 org/example/grupo_7_praticaatdd/
 ├── matricula/
-│   ├── api/            MatriculaRestController  MatriculaRequestDTO  MatriculaResponseDTO  NotaRequestDTO
-│   ├── application/    MatriculaService
-│   └── internal/       MatriculaEntity  MatriculaRepository
+│   ├── api/                    MatriculaRestController  MatriculaRequestDTO  MatriculaResponseDTO  NotaRequestDTO
+│   ├── application/            MatriculaService
+│   └── internal/persistence/   MatriculaEntity  MatriculaRepository
 ├── ranking/
-│   ├── api/            RankingRestController  RankingResponseDTO
+│   ├── api/            RankingRestController  RankingItemDTO
 │   ├── application/    RankingService
-│   └── internal/       RankingRepository
+│   └── internal/       RankingConsulta  AlunoPontuado
 ├── domain/             núcleo da AC1, compartilhado e coberto por TDD
 └── controller/ service/ repository/ entity/ dto/   usuario e curso, ainda em camadas
 ```
 
-Regras de fronteira que serão verificadas por testes ArchUnit:
+Mapa de pacotes antes e depois, gerado pelo mesmo script (`scripts/dependencias.sh`, com `jdeps`):
+[antes-pacotes.txt](docs/evidencias/desafio-1/antes-pacotes.txt) ×
+[depois-pacotes.txt](docs/evidencias/desafio-1/depois-pacotes.txt) e
+[antes-estrutura.txt](docs/evidencias/desafio-1/antes-estrutura.txt) ×
+[depois-estrutura.txt](docs/evidencias/desafio-1/depois-estrutura.txt).
+
+Regras de fronteira verificadas a cada build por `ModulosArchTest` (ArchUnit):
 
 - nenhuma classe fora de `matricula` acessa `matricula.internal`;
 - nenhuma classe fora de `ranking` acessa `ranking.internal`;
-- o `domain` não depende de Spring nem de JPA.
+- `ranking` e `matricula` não dependem um do outro;
+- o legado em camadas não chama o `application` dos módulos;
+- o `domain` não depende de Spring nem de JPA (`ArquiteturaCamadasTest`).
 
-### 9.4 O que comparar
+### 9.4 O que comparar (resultado)
 
-| Evidência | Antes | Depois / resultado esperado |
+| Evidência | Antes | Depois |
 |---|---|---|
-| Organização | Por camada técnica: Matrícula em 6 pacotes. | Por capacidade de negócio: Matrícula e Ranking em um pacote cada. |
-| Dependências | Classes de capacidades distintas se misturam nas mesmas camadas; acesso livre à persistência de outras capacidades. | Dependências entre módulos ficam explícitas, ocorrem por contratos (`api`/`application`) e são verificadas por ArchUnit. |
-| Testes | Só o `domain` tem testes; a API não tem rede de segurança. | Testes MockMvc da matrícula escritos antes da reorganização passam iguais depois; testes concentrados por módulo. |
-| Evolução futura | Extrair o Ranking exigiria reorganizar várias camadas. | Ranking possui fronteira clara para futura extração, se necessária. |
+| Organização | Matrícula em 6 pacotes técnicos (`controller`, `dto`, `service`, `entity`, `repository`, `domain`). | Matrícula em 1 módulo (`matricula/`) + o `domain` da AC1; Ranking em 1 módulo (`ranking/`). |
+| Dependências | Só setas entre camadas; não dá para saber de qual capacidade é cada classe. | Cada seta diz qual módulo usa o quê; não existe seta entre `ranking` e `matricula`. |
+| Proteção | Nenhuma: qualquer classe usava qualquer repository. | Acessar o `internal` de outro módulo derruba o build: [violacao-simulada.md](docs/evidencias/desafio-1/violacao-simulada.md). |
+| Comportamento | 15 testes verdes, sendo 5 de API da matrícula escritos **antes** da mudança: [antes-testes.txt](docs/evidencias/desafio-1/antes-testes.txt). | Os mesmos testes verdes, mais Ranking e 5 regras de fronteira (23 testes): [depois-testes.txt](docs/evidencias/desafio-1/depois-testes.txt). |
+| Infraestrutura | 1 jar, 1 container de aplicação, 1 banco. | Igual: nenhum processo novo. |
 
 ### 9.5 Como reproduzir
 
@@ -266,10 +275,10 @@ jdeps -verbose:class -filter:none target/classes
 | ADR-001 com decisão e trade-offs | Feito (seção 7) |
 | C4 Container atualizado | Feito (seção 8) |
 | Estrutura e dependências **antes** | Feito: [antes-dependencias.txt](docs/evidencias/desafio-1/antes-dependencias.txt) |
-| Testes MockMvc da matrícula antes da reorganização | Pendente |
-| Código da modularização da Matrícula e do módulo Ranking (RF01) | Pendente |
-| Estrutura e dependências **depois** + regras ArchUnit | Pendente |
-| Testes executados após a refatoração, demonstrando preservação do comportamento | Pendente |
+| Testes MockMvc da matrícula antes da reorganização | Feito: `MatriculaApiTest` (5 testes) |
+| Código da modularização da Matrícula e do módulo Ranking (RF01) | Feito: `matricula/` e `ranking/` com `GET /api/ranking` |
+| Estrutura e dependências **depois** + regras ArchUnit | Feito: [depois-pacotes.txt](docs/evidencias/desafio-1/depois-pacotes.txt) e `ModulosArchTest` |
+| Testes executados após a refatoração, demonstrando preservação do comportamento | Feito: [depois-testes.txt](docs/evidencias/desafio-1/depois-testes.txt) |
 
 ## 11. Conclusão
 
@@ -284,8 +293,11 @@ independente. Essa decisão deverá ser revisitada quando métricas de carga, la
 frequência de deploy justificarem o custo adicional de distribuição. Essas métricas passam a ser
 coletadas no Desafio 6.
 
-O mini-lab vai comprovar se a reorganização reduz o acoplamento estrutural sem alterar o
-comportamento funcional; esta conclusão será completada com o resultado do "depois".
+O mini-lab confirmou a hipótese. A Matrícula foi reorganizada por capacidade e o Ranking nasceu
+como módulo, sem comunicação distribuída e sem mudar o comportamento: os 5 testes de API escritos
+antes da mudança passaram iguais depois. A fronteira deixou de ser combinação da equipe e passou a
+ser verificada pelo build. Fica como dívida conhecida que o módulo `matricula` ainda usa os
+repositórios de usuário e curso do legado; eles migram quando forem alterados.
 
 ## 12. Rastreabilidade final
 

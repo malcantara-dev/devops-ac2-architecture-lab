@@ -1,23 +1,23 @@
-package org.example.grupo_7_praticaatdd.service;
+package org.example.grupo_7_praticaatdd.matricula.application;
 
 import org.example.grupo_7_praticaatdd.domain.Assinatura;
 import org.example.grupo_7_praticaatdd.domain.Curso;
 import org.example.grupo_7_praticaatdd.domain.Matricula;
 import org.example.grupo_7_praticaatdd.domain.Usuario;
-import org.example.grupo_7_praticaatdd.dto.MatriculaResponseDTO;
 import org.example.grupo_7_praticaatdd.entity.CursoEntity;
-import org.example.grupo_7_praticaatdd.entity.MatriculaEntity;
 import org.example.grupo_7_praticaatdd.entity.UsuarioEntity;
+import org.example.grupo_7_praticaatdd.matricula.api.MatriculaResponseDTO;
+import org.example.grupo_7_praticaatdd.matricula.internal.persistence.MatriculaEntity;
+import org.example.grupo_7_praticaatdd.matricula.internal.persistence.MatriculaRepository;
 import org.example.grupo_7_praticaatdd.repository.CursoRepository;
-import org.example.grupo_7_praticaatdd.repository.MatriculaRepository;
 import org.example.grupo_7_praticaatdd.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-// Camada SERVICE: orquestra repositorios e delega as regras de negocio
-// para as classes do pacote domain, que foram escritas via TDD.
+// Modulo matricula, camada application: orquestra a persistencia e delega as regras
+// de negocio para o pacote domain, que foi escrito via TDD na AC1.
 @Service
 public class MatriculaService {
 

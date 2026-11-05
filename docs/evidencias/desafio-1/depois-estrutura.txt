@@ -1,0 +1,48 @@
+# Estrutura do Core (depois)
+
+Grupo7PraticaAtddApplication.java
+config/OpenApiConfig.java
+controller/ApiExceptionHandler.java
+controller/CursoRestController.java
+controller/UsuarioRestController.java
+domain/Assinatura.java
+domain/Curso.java
+domain/Matricula.java
+domain/StatusMatricula.java
+domain/Usuario.java
+dto/CursoRequestDTO.java
+dto/CursoResponseDTO.java
+dto/UsuarioRequestDTO.java
+dto/UsuarioResponseDTO.java
+entity/CursoEntity.java
+entity/UsuarioEntity.java
+matricula/api/MatriculaRequestDTO.java
+matricula/api/MatriculaResponseDTO.java
+matricula/api/MatriculaRestController.java
+matricula/api/NotaRequestDTO.java
+matricula/application/MatriculaService.java
+matricula/internal/persistence/MatriculaEntity.java
+matricula/internal/persistence/MatriculaRepository.java
+matricula/package-info.java
+ranking/api/RankingItemDTO.java
+ranking/api/RankingRestController.java
+ranking/application/RankingService.java
+ranking/internal/AlunoPontuado.java
+ranking/internal/RankingConsulta.java
+ranking/package-info.java
+repository/CursoRepository.java
+repository/UsuarioRepository.java
+service/CursoService.java
+service/UsuarioService.java
+
+## Matricula: classes espalhadas em 4 pasta(s)
+- domain
+- matricula/api
+- matricula/application
+- matricula/internal/persistence
+
+## Ranking: classes espalhadas em 3 pasta(s)
+- ranking/api
+- ranking/application
+- ranking/internal
+

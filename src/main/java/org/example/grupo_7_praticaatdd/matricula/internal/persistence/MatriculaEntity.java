@@ -1,4 +1,4 @@
-package org.example.grupo_7_praticaatdd.entity;
+package org.example.grupo_7_praticaatdd.matricula.internal.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,6 +11,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.example.grupo_7_praticaatdd.domain.StatusMatricula;
+import org.example.grupo_7_praticaatdd.entity.CursoEntity;
+import org.example.grupo_7_praticaatdd.entity.UsuarioEntity;
 
 @Entity
 @Table(name = "matriculas")
