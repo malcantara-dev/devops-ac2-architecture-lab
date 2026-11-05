@@ -91,7 +91,21 @@ services:
     networks:
       - app_net
 
+  # Desafio 5: broker MQTT para dispositivos com conexao instavel
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: gamificacao-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+    networks:
+      - app_net
+
 volumes:
+  mosquitto_data:
   postgres_data:
   pgadmin_data:
 
