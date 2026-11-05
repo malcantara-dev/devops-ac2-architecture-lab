@@ -1,0 +1,43 @@
+// Pipeline independente do ia-service (Desafio 6): muda e publica sem esperar o Core.
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+    }
+
+    stages {
+        stage('Testes') {
+            steps {
+                dir('ia-service') {
+                    sh '''
+                        python3 -m venv .venv
+                        . .venv/bin/activate
+                        pip install -q -r requirements-dev.txt
+                        pytest --junitxml=relatorio-pytest.xml
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit 'ia-service/relatorio-pytest.xml'
+                }
+            }
+        }
+
+        stage('Imagem') {
+            steps {
+                sh 'docker build -t gamificacao-ia:${BUILD_NUMBER} -t gamificacao-ia:latest ia-service'
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh 'docker compose up -d --no-deps --build ia-service'
+            }
+        }
+    }
+}
