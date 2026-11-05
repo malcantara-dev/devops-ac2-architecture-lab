@@ -877,6 +877,82 @@ RabbitMQ fica para quando existir mais de um consumidor interno.
 
 ---
 
+# Desafio 6 - CI/CD e observabilidade
+
+**Papel: Tech Lead.** Provar que a arquitetura pode ser construída, implantada e observada.
+
+## 1. Leitura do cenário
+
+Depois dos desafios anteriores, a solução tem o Core Java, o `ia-service` e o `notificacao-worker`
+em Python, o RabbitMQ, o Mosquitto e o gateway IoT. A arquitetura só se sustenta se a equipe
+conseguir testar, implantar e observar cada parte com segurança.
+
+## 2. RFs afetados
+
+| ID | Requisito funcional | Impacto no desafio |
+|---|---|---|
+| RF01 a RF06 | Todos os componentes construídos | Cada um precisa de pipeline e de uma métrica que mostre se a decisão dele se sustenta. |
+
+## 3. RNFs e seleção dos ASRs
+
+| RNF | FURPS+ | ASR? | Justificativa arquitetural |
+|---|---|---|---|
+| Observabilidade | Supportability | **SIM** | Sem métricas, os gatilhos de revisão dos ADRs 001, 003 e 004 não têm como disparar. |
+| Deploy independente | Supportability | **SIM** | O ADR-003 separou a IA; o pipeline precisa respeitar essa separação. |
+| Confiabilidade | Reliability | **SIM** | Build quebrado ou regra de arquitetura violada não pode chegar ao ambiente. |
+| Testabilidade | Supportability | NÃO como driver | Já garantida nos desafios anteriores; aqui vira gate. |
+| Recuperabilidade | Reliability | NÃO como driver | Medida pela fila do D4 no dashboard. |
+| Desempenho | Performance | NÃO como driver | Medido (latência do ranking), sem meta ainda. |
+
+## 4. RPCs - restrições e premissas
+
+| RPC | Consequência para a decisão |
+|---|---|
+| Jenkins é a base da esteira | Jenkinsfile versionado por componente; Jenkins local em container. |
+| Prometheus e Grafana são as ferramentas do laboratório | Actuator + Micrometer no Core; datasource e dashboard provisionados por arquivo. |
+| Artefatos e configurações versionados | `Jenkinsfile`, `casc.yaml`, `prometheus.yml` e o JSON do dashboard estão no Git. |
+
+## 5. Alternativas e trade-offs
+
+| Alternativa | Benefícios | Custos / riscos | Avaliação |
+|---|---|---|---|
+| A - Pipeline único para tudo | Um arquivo só. | Um teste Python quebrado barra o deploy do Core e vice-versa; contradiz o ADR-003. | Rejeitada. |
+| B - Um pipeline por componente | Core e IA publicam no seu ritmo; falha isolada. | Dois Jenkinsfiles para manter. | **Escolhida.** |
+
+Métricas selecionadas pelo que provam, não por estarem disponíveis: latência do ranking (D1),
+recomendações por origem (D3), fila de notificação (D4), eventos IoT duplicados (D5) e erros 5xx
+do Core (D6).
+
+## 6. Decisão do Tech Lead
+
+**DECISÃO: um pipeline Jenkins por componente, com gate de qualidade, e um dashboard com um painel
+por ASR.**
+
+- **Serviços independentes exigem pipelines independentes?** Sim: senão o deploy independente do
+  ADR-003 existe só no papel.
+- **O que bloqueia o deploy?** Teste falhando (inclusive ArchUnit, que protege as fronteiras do D1
+  e do D2) e cobertura do `domain` abaixo de 90%.
+- **Métrica técnica × evidência arquitetural:** a métrica vira evidência quando responde ao ASR de
+  um ADR. Exemplo: o número de fallbacks só prova o ADR-003 junto com zero erros 5xx no mesmo
+  intervalo.
+
+## 7. ADR-006 - Esteira e observabilidade
+
+| Campo | Registro |
+|---|---|
+| Título | ADR-006 - Pipelines por componente e métricas ligadas aos ASRs |
+| Status | Aceito |
+| Contexto | Vários componentes com ciclos diferentes; os ADRs anteriores têm gatilhos que dependem de métricas. |
+| ASRs | Observabilidade; Deploy independente; Confiabilidade. |
+| RPCs | Jenkins; Prometheus/Grafana; tudo versionado. |
+| Alternativas | A) pipeline único; B) pipeline por componente. |
+| Decisão | `Jenkinsfile` (Core: testes, ArchUnit, gate JaCoCo, imagem, deploy) e `ia-service/Jenkinsfile` (pytest, imagem, deploy); Jenkins com jobs por `casc.yaml`; Actuator/Micrometer no Core; dashboard "AC2 - Arquitetura (ASRs)" provisionado. |
+| Consequências positivas | Cada componente publica sozinho; regras de arquitetura viram gate; os gatilhos dos ADRs têm painel. |
+| Trade-offs | Mais arquivos de pipeline; Jenkins local precisa de acesso ao Docker; ia-service ainda sem métricas próprias. |
+| Gatilho de revisão | Instrumentar o ia-service e criar alertas quando os painéis ficarem estáveis. |
+
+---
+
 # Matriz cumulativa de ASRs
 
 | ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
@@ -899,7 +975,7 @@ RabbitMQ fica para quando existir mais de um consumidor interno.
 - Desafio 3 - Serviço Python e IA: concluído
 - Desafio 4 - Comunicação e eventos: concluído
 - Desafio 5 - IoT e MQTT: concluído
-- Desafio 6 - CI/CD e observabilidade: pendente
+- Desafio 6 - CI/CD e observabilidade: em andamento (decisão registrada)
 
 # Como executar
 
