@@ -818,6 +818,63 @@ plataforma sem que o Core conheça cada dispositivo e sem perder ou duplicar eve
 | Trade-offs | Broker e gateway a operar; segurança (TLS/ACL) ainda pendente; consistência eventual dos eventos. |
 | Gatilho de revisão | Ponte para o RabbitMQ quando houver mais de um consumidor interno dos eventos IoT; TLS e ACL antes de produção. |
 
+## 8. C4 - visão de Container e fluxo do evento
+
+```mermaid
+flowchart LR
+    subgraph lab["Laboratório"]
+        disp["Dispositivos<br/>[catraca / leitor]<br/>simulador.py"]
+    end
+    disp -- "MQTT QoS 1<br/>labs/{lab}/dispositivos/{id}/eventos" --> broker[("Mosquitto<br/>[broker MQTT, persistência]")]
+    broker -- "MQTT, sessão persistente" --> gw["Gateway IoT<br/>[Python] gateway.py"]
+    gw -- "REST/JSON<br/>POST /api/eventos-iot" --> core["Core Gamificação<br/>[Spring Boot] módulo iot"]
+    core -- "JPA, eventId único" --> db[("PostgreSQL")]
+```
+
+Fluxo: o dispositivo gera o `eventId` e publica com QoS 1 → o broker guarda enquanto o gateway não
+confirma → o gateway valida e chama o Core → o Core grava ou responde `duplicado`.
+
+## 9. Mini-lab - evidência arquitetural
+
+**Hipótese:** com QoS 1, sessão persistente e idempotência, o gateway pode cair sem perder eventos
+e reentregas não duplicam registros.
+
+| Evidência | Resultado |
+|---|---|
+| Idempotência no Core | Evento novo 201; mesmo `eventId` 200 `duplicado`; sem `eventId` 400 (3 testes). |
+| Validação no gateway | Tipo inválido e campo ausente descartados (3 testes pytest). |
+| Reconexão | Sessão persistente (`client_id` fixo, `clean_start=False`, 24 h) e roteiro com o simulador `--duplicar`. |
+| Arquivo | [reconexao-e-duplicidade.md](docs/evidencias/desafio-5/reconexao-e-duplicidade.md) |
+
+## 10. Evidências a versionar
+
+| Evidência | Situação |
+|---|---|
+| Simulador publicando no broker MQTT | Feito: [iot/simulador.py](iot/simulador.py) |
+| Consumidor transformando o evento para a aplicação | Feito: [iot/gateway.py](iot/gateway.py) + módulo `iot` do Core |
+| Broker no compose | Feito: serviço `mosquitto` e [infra/mosquitto/mosquitto.conf](infra/mosquitto/mosquitto.conf) |
+| C4 Container + fluxo | Feito (seção 8) |
+
+## 11. Conclusão
+
+O MQTT resolveu o que o REST não resolve para dispositivos instáveis: o broker segura o evento e o
+gateway retoma de onde parou. Como o QoS 1 entrega pelo menos uma vez, a idempotência no Core é
+obrigatória e foi comprovada por teste. Não houve motivo para um segundo broker; a ponte com o
+RabbitMQ fica para quando existir mais de um consumidor interno.
+
+## 12. Rastreabilidade final
+
+| Elemento | Resposta resumida |
+|---|---|
+| RF | RF06 Eventos IoT dos laboratórios. |
+| RNF | Interoperabilidade, eficiência de comunicação, disponibilidade, conectividade intermitente, escalabilidade e segurança. |
+| ASR | Conectividade intermitente, eficiência de comunicação e interoperabilidade. |
+| RPC | Dispositivos fracos, conexão instável, custo de broker. |
+| Alternativas | REST direto × MQTT + gateway × MQTT + ponte para RabbitMQ. |
+| ADR | ADR-005: MQTT com gateway e idempotência no Core. |
+| C4 | Container com dispositivos, broker, gateway e Core + fluxo do evento. |
+| Evidência | Testes de idempotência e validação; sessão persistente e roteiro de reconexão. |
+
 ---
 
 # Matriz cumulativa de ASRs
@@ -830,16 +887,18 @@ plataforma sem que o Core conheça cada dispositivo e sem perder ou duplicar eve
 | Modificabilidade | | ✔ | | | | | Regras só no `domain`; ArchUnit proíbe JPA no caso de uso |
 | Testabilidade | | ✔ | | | | | Mesmo contrato verde com adapter em memória e JPA |
 | Deploy independente | | | ✔ | | | | `ia-service` com container e pipeline próprios |
-| Tolerância a falhas | | | ✔ | ✔ | | | Fallback com IA fora do ar; métrica de fallbacks no D6 |
+| Tolerância a falhas | | | ✔ | ✔ | ✔ | | Fallback com IA fora do ar; métrica de fallbacks no D6 |
 | Desacoplamento | | | | ✔ | | | Core não conhece os consumidores do evento |
 | Recuperabilidade | | | | ✔ | | | Fila durável + DLQ; mensagens esperam o worker |
+| Eficiência de comunicação | | | | | ✔ | | MQTT QoS 1 com conexão persistente |
+| Interoperabilidade | | | | | ✔ | | Protocolo padrão de IoT; Core só fala REST com o gateway |
 
 # Desafios seguintes
 
 - Desafio 2 - Organização interna do Core: concluído
 - Desafio 3 - Serviço Python e IA: concluído
 - Desafio 4 - Comunicação e eventos: concluído
-- Desafio 5 - IoT e MQTT: em andamento (decisão registrada)
+- Desafio 5 - IoT e MQTT: concluído
 - Desafio 6 - CI/CD e observabilidade: pendente
 
 # Como executar
