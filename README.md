@@ -605,6 +605,79 @@ contrato HTTP. As métricas de fallback passam a ser acompanhadas no Desafio 6.
 
 ---
 
+# Desafio 4 - Comunicação e eventos
+
+**Papel: Tech Lead.** Decidir onde o sincronismo é necessário e onde eventos reduzem acoplamento.
+
+## 1. Leitura do cenário
+
+Ao concluir um curso, o sistema registra a conclusão, calcula as recompensas (créditos, Premium e
+moedas), atualiza o ranking e pode disparar notificação e analytics. Uma falha de notificação não
+pode impedir a conclusão do curso.
+
+## 2. RFs afetados
+
+| ID | Requisito funcional | Impacto no desafio |
+|---|---|---|
+| RF02 | Conquistas | Créditos e Premium precisam ser gravados junto com a conclusão. |
+| RF05 | Notificações | O aluno deve ser avisado, mas não precisa ser na mesma requisição. |
+| - | Eventos de conclusão de atividade | `CursoConcluidoEvento` passa a existir como contrato. |
+
+## 3. RNFs e seleção dos ASRs
+
+| RNF | FURPS+ | ASR? | Justificativa arquitetural |
+|---|---|---|---|
+| Tolerância a falhas | Reliability | **SIM** | A queda do consumidor não pode desfazer a conclusão. |
+| Desacoplamento | Supportability | **SIM** | O Core não deve conhecer quem consome o evento (notificação hoje, analytics amanhã). |
+| Recuperabilidade | Reliability | **SIM** | Mensagens não podem se perder enquanto o consumidor está fora; precisam ser reprocessadas. |
+| Consistência | Reliability | NÃO para a notificação | Conclusão e créditos são consistentes (mesma transação); a notificação pode ser eventual. |
+| Latência | Performance | NÃO | A resposta ao aluno fica até mais rápida sem esperar a notificação. |
+| Disponibilidade | Reliability | NÃO como driver separado | Coberta pela tolerância a falhas. |
+
+## 4. RPCs - restrições e premissas
+
+| RPC | Consequência para a decisão |
+|---|---|
+| Operações essenciais do Core concluem mesmo com consumidor indisponível | Notificação fora da transação da conclusão. |
+| Adoção de broker exige custo operacional | Um broker só, simples de operar, e só para o que pode ser eventual. |
+
+## 5. Alternativas e trade-offs
+
+| Alternativa | Benefícios | Custos / riscos | Avaliação |
+|---|---|---|---|
+| A - Tudo REST síncrono | Simples; erro aparece na hora. | Worker fora do ar derruba a conclusão (comprovado no mini-lab: 503 e rollback). | Rejeitada para a notificação. |
+| B - Assíncrono com RabbitMQ | Fila durável, ack manual e DLQ; consumidor pode cair sem afetar o Core. | Mais um container; consistência eventual da notificação. | **Escolhida.** |
+| C - Assíncrono com Kafka | Retenção e replay de eventos; altíssimo volume. | Mais complexo de operar; replay e streaming não são problema deste case. | Rejeitada: resolve um problema que não temos. |
+
+## 6. Decisão do Tech Lead
+
+**DECISÃO: síncrono no núcleo, assíncrono nas bordas.**
+
+- **O que precisa ser imediato?** Concluir o curso e creditar (créditos, Premium, moedas): mesma
+  transação, resposta 200 para o aluno.
+- **O que pode ser eventual?** Notificação (e futuramente analytics): evento depois do commit.
+- **Que ASR justifica mensageria?** Tolerância a falhas e recuperabilidade: a mensagem fica na fila
+  durável enquanto o consumidor está fora.
+- **RabbitMQ ou Kafka?** RabbitMQ, pelo problema do case: fila de trabalho com ack e DLQ, não um log
+  de eventos para replay.
+
+## 7. ADR-004 - Comunicação na conclusão do curso
+
+| Campo | Registro |
+|---|---|
+| Título | ADR-004 - Notificação assíncrona via RabbitMQ, conclusão síncrona |
+| Status | Aceito |
+| Contexto | A conclusão do curso dispara recompensas e notificação; a notificação não pode bloquear a conclusão. |
+| ASRs | Tolerância a falhas; Desacoplamento; Recuperabilidade. |
+| RPCs | Operações essenciais concluem com consumidor fora; broker tem custo operacional. |
+| Alternativas | A) REST síncrono; B) assíncrono com RabbitMQ; C) assíncrono com Kafka. |
+| Decisão | `MatriculaService` publica `CursoConcluidoEvento`; `NotificacaoAssincrona` (`@TransactionalEventListener(AFTER_COMMIT)`) envia para a fila durável `notificacoes.curso-concluido` (mensagem persistente, DLQ); o `notificacao-worker` (Python) consome com ack manual. |
+| Consequências positivas | Conclusão nunca falha por causa da notificação; consumidores novos entram sem mexer no Core. |
+| Trade-offs | Notificação eventual; se o **broker** cair, o evento só fica no log (sem outbox por enquanto); mais um container. |
+| Gatilho de revisão | Adotar outbox transacional se a perda de notificações com o broker fora virar problema; reavaliar Kafka se surgir necessidade de replay ou analytics em grande volume. |
+
+---
+
 # Matriz cumulativa de ASRs
 
 | ASR | D1 | D2 | D3 | D4 | D5 | D6 | Evidência / métrica que valida |
@@ -621,7 +694,7 @@ contrato HTTP. As métricas de fallback passam a ser acompanhadas no Desafio 6.
 
 - Desafio 2 - Organização interna do Core: concluído
 - Desafio 3 - Serviço Python e IA: concluído
-- Desafio 4 - Comunicação e eventos: pendente
+- Desafio 4 - Comunicação e eventos: em andamento (decisão registrada)
 - Desafio 5 - IoT e MQTT: pendente
 - Desafio 6 - CI/CD e observabilidade: pendente
 
