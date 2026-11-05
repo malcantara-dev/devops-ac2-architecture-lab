@@ -1,0 +1,12 @@
+# Dependencias entre pacotes do Core (antes)
+# Gerado por scripts/dependencias.sh com jdeps
+# Leitura: origem -> destino (prefixo org.example.grupo_7_praticaatdd omitido)
+
+controller -> dto
+controller -> service
+entity -> domain
+repository -> entity
+service -> domain
+service -> dto
+service -> entity
+service -> repository
