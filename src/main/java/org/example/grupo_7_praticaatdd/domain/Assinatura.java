@@ -10,6 +10,17 @@ public class Assinatura {
     private PlanoAssinatura plano = PlanoAssinatura.BASICO;
     private int moedas = 0;
 
+    // Reconstroi uma assinatura a partir do estado salvo, sem perder nada do que o dominio precisa.
+    public static Assinatura restaurar(int creditosCursos, int cursosConcluidosComSucesso,
+                                       PlanoAssinatura plano, int moedas) {
+        Assinatura assinatura = new Assinatura();
+        assinatura.creditosCursos = creditosCursos;
+        assinatura.cursosConcluidosComSucesso = cursosConcluidosComSucesso;
+        assinatura.plano = plano;
+        assinatura.moedas = moedas;
+        return assinatura;
+    }
+
     public int getCreditosCursos() {
         return creditosCursos;
     }
