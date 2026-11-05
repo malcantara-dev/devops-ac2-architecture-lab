@@ -50,8 +50,19 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gamificacao_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      IA_URL: http://ia-service:8000
     ports:
       - "8080:8080"
+    networks:
+      - app_net
+
+  # Desafio 3: fronteira de IA em Python, com deploy e escala proprios
+  ia-service:
+    build: ./ia-service
+    container_name: gamificacao-ia
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
     networks:
       - app_net
 
