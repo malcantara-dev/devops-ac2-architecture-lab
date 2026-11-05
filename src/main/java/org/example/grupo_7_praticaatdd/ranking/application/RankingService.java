@@ -1,5 +1,6 @@
 package org.example.grupo_7_praticaatdd.ranking.application;
 
+import org.example.grupo_7_praticaatdd.domain.PoliticaDePontuacao;
 import org.example.grupo_7_praticaatdd.ranking.api.RankingItemDTO;
 import org.example.grupo_7_praticaatdd.ranking.internal.AlunoPontuado;
 import org.example.grupo_7_praticaatdd.ranking.internal.RankingConsulta;
@@ -11,10 +12,9 @@ import java.util.Comparator;
 import java.util.List;
 
 // Modulo ranking, camada application: ordena os alunos e numera as posicoes.
+// A formula da pontuacao e regra de negocio e mora no dominio (PoliticaDePontuacao).
 @Service
 public class RankingService {
-
-    static final int PONTOS_POR_CURSO_CONCLUIDO = 100;
 
     private final RankingConsulta consulta;
 
@@ -31,12 +31,16 @@ public class RankingService {
         List<RankingItemDTO> ranking = new ArrayList<>();
         for (int i = 0; i < alunos.size(); i++) {
             AlunoPontuado a = alunos.get(i);
-            ranking.add(new RankingItemDTO(i + 1, a.id(), a.nome(), a.cursosConcluidos(), a.creditos(), pontuacao(a)));
+            ranking.add(new RankingItemDTO(i + 1, a.id(), a.nome(), a.cursosConcluidos(), a.creditos(), moedas(a), pontuacao(a)));
         }
         return ranking;
     }
 
     private int pontuacao(AlunoPontuado aluno) {
-        return aluno.cursosConcluidos() * PONTOS_POR_CURSO_CONCLUIDO + aluno.creditos();
+        return PoliticaDePontuacao.pontuar(aluno.cursosConcluidos(), moedas(aluno), aluno.creditos());
+    }
+
+    private static int moedas(AlunoPontuado aluno) {
+        return aluno.moedas() == null ? 0 : aluno.moedas();
     }
 }

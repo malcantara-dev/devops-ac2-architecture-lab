@@ -10,6 +10,6 @@ import java.util.List;
 public interface RankingConsulta extends Repository<UsuarioEntity, Long> {
 
     @Query("select new org.example.grupo_7_praticaatdd.ranking.internal.AlunoPontuado("
-            + "u.id, u.nome, u.cursosConcluidosComSucesso, u.creditosCursos) from UsuarioEntity u")
+            + "u.id, u.nome, u.cursosConcluidosComSucesso, u.creditosCursos, u.moedas) from UsuarioEntity u")
     List<AlunoPontuado> buscarAlunos();
 }
