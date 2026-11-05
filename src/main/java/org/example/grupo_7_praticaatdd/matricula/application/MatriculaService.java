@@ -9,8 +9,10 @@ import org.example.grupo_7_praticaatdd.gamificacao.application.GamificacaoServic
 import org.example.grupo_7_praticaatdd.matricula.api.MatriculaResponseDTO;
 import org.example.grupo_7_praticaatdd.matricula.internal.persistence.MatriculaEntity;
 import org.example.grupo_7_praticaatdd.matricula.internal.persistence.MatriculaRepository;
+import org.example.grupo_7_praticaatdd.notificacao.api.CursoConcluidoEvento;
 import org.example.grupo_7_praticaatdd.repository.CursoRepository;
 import org.example.grupo_7_praticaatdd.repository.UsuarioRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,15 +27,18 @@ public class MatriculaService {
     private final UsuarioRepository usuarioRepository;
     private final CursoRepository cursoRepository;
     private final GamificacaoService gamificacao;
+    private final ApplicationEventPublisher eventos;
 
     public MatriculaService(MatriculaRepository matriculaRepository,
                             UsuarioRepository usuarioRepository,
                             CursoRepository cursoRepository,
-                            GamificacaoService gamificacao) {
+                            GamificacaoService gamificacao,
+                            ApplicationEventPublisher eventos) {
         this.matriculaRepository = matriculaRepository;
         this.usuarioRepository = usuarioRepository;
         this.cursoRepository = cursoRepository;
         this.gamificacao = gamificacao;
+        this.eventos = eventos;
     }
 
     public List<MatriculaResponseDTO> listarPorUsuario(Long usuarioId) {
@@ -70,7 +75,12 @@ public class MatriculaService {
         if (matricula.concluidoComAproveitamento()) {
             gamificacao.registrarConclusaoComSucesso(entity.getUsuario().getId());
         }
-        return toDTO(matriculaRepository.save(entity));
+        MatriculaEntity salva = matriculaRepository.save(entity);
+
+        // Desafio 4: a notificacao e eventual. O evento so sai depois do commit (modo async).
+        eventos.publishEvent(new CursoConcluidoEvento(salva.getId(), salva.getUsuario().getId(),
+                salva.getCurso().getTitulo(), nota, matricula.concluidoComAproveitamento()));
+        return toDTO(salva);
     }
 
     // Cenario 4: a nota parcial e apenas registrada, o curso segue em andamento.
