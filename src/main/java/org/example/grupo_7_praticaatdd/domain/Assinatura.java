@@ -33,10 +33,14 @@ public class Assinatura {
     public void registrarConclusaoComSucesso() {
         this.cursosConcluidosComSucesso = this.cursosConcluidosComSucesso + 1;
         adicionarCreditos(CREDITOS_POR_CONCLUSAO);
-        if (this.cursosConcluidosComSucesso >= 12 && this.plano == PlanoAssinatura.BASICO) {
-            this.plano = PlanoAssinatura.PREMIUM;
-            this.moedas = this.moedas + 3;
+        if (PoliticaDeGamificacao.devePromoverParaPremium(this.cursosConcluidosComSucesso, this.plano)) {
+            promoverParaPremium();
         }
+    }
+
+    private void promoverParaPremium() {
+        this.plano = PlanoAssinatura.PREMIUM;
+        this.moedas = this.moedas + PoliticaDeGamificacao.MOEDAS_NA_PROMOCAO;
     }
 
     public void consumirCredito() {

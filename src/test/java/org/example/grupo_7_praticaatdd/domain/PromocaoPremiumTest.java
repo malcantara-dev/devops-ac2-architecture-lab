@@ -45,4 +45,20 @@ class PromocaoPremiumTest {
         assertEquals(PlanoAssinatura.BASICO, usuario.getAssinatura().getPlano());
         assertEquals(0, usuario.getAssinatura().getMoedas());
     }
+
+    @Test
+    @DisplayName("Cenario 7 - quem ja e Premium nao recebe as 3 moedas de novo no 13o curso")
+    void naoDeveCreditarMoedasDeNovoAposPremium() {
+        // GIVEN - dado um usuario que ja virou Premium no 12o curso
+        Usuario usuario = new Usuario("Helena");
+        concluirCursos(usuario, 12);
+
+        // WHEN - quando ele conclui mais um curso com aproveitamento
+        concluirCursos(usuario, 1);
+
+        // THEN - entao continua Premium e com as mesmas 3 moedas
+        assertEquals(13, usuario.getAssinatura().getCursosConcluidosComSucesso());
+        assertEquals(PlanoAssinatura.PREMIUM, usuario.getAssinatura().getPlano());
+        assertEquals(3, usuario.getAssinatura().getMoedas());
+    }
 }
