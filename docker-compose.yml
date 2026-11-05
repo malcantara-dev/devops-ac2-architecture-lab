@@ -80,6 +80,17 @@ services:
     networks:
       - app_net
 
+  notificacao-worker:
+    build: ./notificacao-worker
+    container_name: gamificacao-notificacao
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      - rabbitmq
+    networks:
+      - app_net
+
 volumes:
   postgres_data:
   pgadmin_data:
