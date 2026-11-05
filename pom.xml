@@ -118,6 +118,31 @@
                             <goal>report</goal>
                         </goals>
                     </execution>
+                    <!-- Desafio 6: o dominio (regras do TDD) abaixo de 90% de linhas barra o build -->
+                    <execution>
+                        <id>gate-cobertura-dominio</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>org.example.grupo_7_praticaatdd.domain</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.90</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
