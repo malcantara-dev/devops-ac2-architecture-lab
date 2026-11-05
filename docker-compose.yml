@@ -51,6 +51,9 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       IA_URL: http://ia-service:8000
+      SPRING_RABBITMQ_HOST: rabbitmq
+      NOTIFICACAO_MODO: async
+      NOTIFICACAO_WORKER_URL: http://notificacao-worker:8001
     ports:
       - "8080:8080"
     networks:
@@ -63,6 +66,28 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    networks:
+      - app_net
+
+  # Desafio 4: broker para os eventos que podem ser eventuais (notificacao)
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: gamificacao-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app_net
+
+  notificacao-worker:
+    build: ./notificacao-worker
+    container_name: gamificacao-notificacao
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      - rabbitmq
     networks:
       - app_net
 
