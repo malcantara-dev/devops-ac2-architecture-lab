@@ -38,4 +38,16 @@ class ModulosArchTest {
     static final ArchRule legadoNaoUsaApplicationDosModulos = noClasses()
             .that().resideInAnyPackage("..controller..", "..service..", "..repository..")
             .should().dependOnClassesThat().resideInAnyPackage("..matricula.application..", "..ranking.application..");
+
+    // Desafio 2: o caso de uso da gamificacao so conhece a porta, nunca o JPA.
+    @ArchTest
+    static final ArchRule gamificacaoApplicationNaoConheceJpa = noClasses()
+            .that().resideInAPackage("..gamificacao.application..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "jakarta.persistence..", "org.springframework.data..", "..entity..", "..repository..");
+
+    @ArchTest
+    static final ArchRule ninguemAcessaAdapterDaGamificacao = noClasses()
+            .that().resideOutsideOfPackage("..gamificacao..")
+            .should().dependOnClassesThat().resideInAPackage("..gamificacao.internal..");
 }

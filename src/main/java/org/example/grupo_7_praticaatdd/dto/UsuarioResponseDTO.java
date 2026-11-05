@@ -6,12 +6,17 @@ public class UsuarioResponseDTO {
     private final String nome;
     private final int creditosCursos;
     private final int cursosConcluidosComSucesso;
+    private final String plano;
+    private final int moedas;
 
-    public UsuarioResponseDTO(Long id, String nome, int creditosCursos, int cursosConcluidosComSucesso) {
+    public UsuarioResponseDTO(Long id, String nome, int creditosCursos, int cursosConcluidosComSucesso,
+                              String plano, int moedas) {
         this.id = id;
         this.nome = nome;
         this.creditosCursos = creditosCursos;
         this.cursosConcluidosComSucesso = cursosConcluidosComSucesso;
+        this.plano = plano;
+        this.moedas = moedas;
     }
 
     public Long getId() {
@@ -28,5 +33,13 @@ public class UsuarioResponseDTO {
 
     public int getCursosConcluidosComSucesso() {
         return cursosConcluidosComSucesso;
+    }
+
+    public String getPlano() {
+        return plano;
+    }
+
+    public int getMoedas() {
+        return moedas;
     }
 }

@@ -29,7 +29,9 @@ public class UsuarioService {
                 entity.getId(),
                 entity.getNome(),
                 entity.getCreditosCursos(),
-                entity.getCursosConcluidosComSucesso()
+                entity.getCursosConcluidosComSucesso(),
+                entity.getPlano().name(),
+                entity.getMoedas()
         );
     }
 }

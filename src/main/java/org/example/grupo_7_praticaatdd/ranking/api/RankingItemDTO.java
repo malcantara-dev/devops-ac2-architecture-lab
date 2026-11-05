@@ -6,6 +6,7 @@ public record RankingItemDTO(
         String nome,
         int cursosConcluidos,
         int creditos,
+        int moedas,
         int pontuacao
 ) {
 }

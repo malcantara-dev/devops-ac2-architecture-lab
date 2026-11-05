@@ -1,11 +1,11 @@
 package org.example.grupo_7_praticaatdd.matricula.application;
 
-import org.example.grupo_7_praticaatdd.domain.Assinatura;
 import org.example.grupo_7_praticaatdd.domain.Curso;
 import org.example.grupo_7_praticaatdd.domain.Matricula;
 import org.example.grupo_7_praticaatdd.domain.Usuario;
 import org.example.grupo_7_praticaatdd.entity.CursoEntity;
 import org.example.grupo_7_praticaatdd.entity.UsuarioEntity;
+import org.example.grupo_7_praticaatdd.gamificacao.application.GamificacaoService;
 import org.example.grupo_7_praticaatdd.matricula.api.MatriculaResponseDTO;
 import org.example.grupo_7_praticaatdd.matricula.internal.persistence.MatriculaEntity;
 import org.example.grupo_7_praticaatdd.matricula.internal.persistence.MatriculaRepository;
@@ -24,13 +24,16 @@ public class MatriculaService {
     private final MatriculaRepository matriculaRepository;
     private final UsuarioRepository usuarioRepository;
     private final CursoRepository cursoRepository;
+    private final GamificacaoService gamificacao;
 
     public MatriculaService(MatriculaRepository matriculaRepository,
                             UsuarioRepository usuarioRepository,
-                            CursoRepository cursoRepository) {
+                            CursoRepository cursoRepository,
+                            GamificacaoService gamificacao) {
         this.matriculaRepository = matriculaRepository;
         this.usuarioRepository = usuarioRepository;
         this.cursoRepository = cursoRepository;
+        this.gamificacao = gamificacao;
     }
 
     public List<MatriculaResponseDTO> listarPorUsuario(Long usuarioId) {
@@ -47,10 +50,7 @@ public class MatriculaService {
     @Transactional
     public MatriculaResponseDTO desbloquear(Long usuarioId, Long cursoId) {
         UsuarioEntity usuario = buscarUsuario(usuarioId);
-
-        Assinatura assinatura = assinaturaDoDominio(usuario);
-        assinatura.consumirCredito();
-        usuario.setCreditosCursos(assinatura.getCreditosCursos());
+        gamificacao.consumirCredito(usuarioId);
 
         MatriculaEntity matricula = new MatriculaEntity(usuario, buscarCurso(cursoId), true);
         return toDTO(matriculaRepository.save(matricula));
@@ -68,7 +68,7 @@ public class MatriculaService {
         entity.setNotaFinal(matricula.getNotaFinal());
 
         if (matricula.concluidoComAproveitamento()) {
-            creditarConclusao(entity.getUsuario());
+            gamificacao.registrarConclusaoComSucesso(entity.getUsuario().getId());
         }
         return toDTO(matriculaRepository.save(entity));
     }
@@ -83,21 +83,6 @@ public class MatriculaService {
 
         entity.setNotaParcial(matricula.getNotaParcial());
         return toDTO(matriculaRepository.save(entity));
-    }
-
-    private void creditarConclusao(UsuarioEntity usuario) {
-        Assinatura assinatura = assinaturaDoDominio(usuario);
-        assinatura.registrarConclusaoComSucesso();
-
-        usuario.setCreditosCursos(assinatura.getCreditosCursos());
-        usuario.setCursosConcluidosComSucesso(
-                usuario.getCursosConcluidosComSucesso() + assinatura.getCursosConcluidosComSucesso());
-    }
-
-    private Assinatura assinaturaDoDominio(UsuarioEntity usuario) {
-        Assinatura assinatura = new Assinatura();
-        assinatura.adicionarCreditos(usuario.getCreditosCursos());
-        return assinatura;
     }
 
     private Matricula matriculaDoDominio(MatriculaEntity entity) {
