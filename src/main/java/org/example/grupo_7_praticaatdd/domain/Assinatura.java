@@ -18,12 +18,10 @@ public class Assinatura {
         return cursosConcluidosComSucesso;
     }
 
-    // TODO Rafael - cenarios 7 e 8
     public PlanoAssinatura getPlano() {
         return plano;
     }
 
-    // TODO Rafael - cenarios 7 e 8
     public int getMoedas() {
         return moedas;
     }
@@ -35,6 +33,10 @@ public class Assinatura {
     public void registrarConclusaoComSucesso() {
         this.cursosConcluidosComSucesso = this.cursosConcluidosComSucesso + 1;
         adicionarCreditos(CREDITOS_POR_CONCLUSAO);
+        if (this.cursosConcluidosComSucesso >= 12 && this.plano == PlanoAssinatura.BASICO) {
+            this.plano = PlanoAssinatura.PREMIUM;
+            this.moedas = this.moedas + 3;
+        }
     }
 
     public void consumirCredito() {
