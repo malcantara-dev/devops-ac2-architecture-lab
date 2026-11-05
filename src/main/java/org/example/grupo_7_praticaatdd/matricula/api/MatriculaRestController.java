@@ -1,12 +1,9 @@
-package org.example.grupo_7_praticaatdd.controller;
+package org.example.grupo_7_praticaatdd.matricula.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.example.grupo_7_praticaatdd.dto.MatriculaRequestDTO;
-import org.example.grupo_7_praticaatdd.dto.MatriculaResponseDTO;
-import org.example.grupo_7_praticaatdd.dto.NotaRequestDTO;
-import org.example.grupo_7_praticaatdd.service.MatriculaService;
+import org.example.grupo_7_praticaatdd.matricula.application.MatriculaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

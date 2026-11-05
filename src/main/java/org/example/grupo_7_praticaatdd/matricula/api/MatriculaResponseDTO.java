@@ -1,4 +1,4 @@
-package org.example.grupo_7_praticaatdd.dto;
+package org.example.grupo_7_praticaatdd.matricula.api;
 
 public class MatriculaResponseDTO {
 

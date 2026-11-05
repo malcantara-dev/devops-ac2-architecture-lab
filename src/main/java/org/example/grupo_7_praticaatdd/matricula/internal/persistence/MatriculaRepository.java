@@ -1,6 +1,5 @@
-package org.example.grupo_7_praticaatdd.repository;
+package org.example.grupo_7_praticaatdd.matricula.internal.persistence;
 
-import org.example.grupo_7_praticaatdd.entity.MatriculaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
